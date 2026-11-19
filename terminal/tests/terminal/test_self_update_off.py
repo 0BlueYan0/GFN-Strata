@@ -1,7 +1,7 @@
 """This build takes no Control or App update from the feed: a feed that offers a newer Control and a newer App says `not-in-feed` for both.
 The engine and the drafter are decided as before.
 
-    python -m pytest tests/terminal/test_self_update_off.py
+    python -m pytest terminal/tests/terminal/test_self_update_off.py
 """
 from __future__ import annotations
 

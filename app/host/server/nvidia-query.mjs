@@ -13,7 +13,7 @@ import { probe } from './util.mjs';
 import { findControl, controlEnvironment } from './control-runtime.mjs';
 import { resolvePython } from './python-resolver.mjs';
 
-const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
+const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'terminal');
 const PYTHON_TIMEOUT_MS = 5_000;
 
 /** Is this a `--query-gpu` call (the only one the Python module answers)? */

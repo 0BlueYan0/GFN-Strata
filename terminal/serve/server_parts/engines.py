@@ -1101,9 +1101,19 @@ def engine_arch_note(cfg: dict, cards: dict[int, int] | None = None, built: dict
         if not archs:
             return None
         if cards is None:
-            r = subprocess.run(["nvidia-smi", "--query-gpu=index,compute_cap", "--format=csv,noheader"], capture_output=True, stdin=subprocess.DEVNULL, text=True,
-                               errors="replace", timeout=10)
-            cards = {int(i): int(round(float(c) * 10)) for i, c in (ln.split(",") for ln in (r.stdout or "").strip().splitlines())}
+            try:
+                r = subprocess.run(["nvidia-smi", "--query-gpu=index,compute_cap", "--format=csv,noheader"], capture_output=True, stdin=subprocess.DEVNULL, text=True,
+                                   errors="replace", timeout=10)
+                text = r.stdout or ""
+            except subprocess.TimeoutExpired:
+                raise                                # the outer handler: a stuck driver, no note
+            except OSError:
+                text = ""                            # nvidia-smi cannot be started (GeForce NOW)
+            if not text.strip():                     # nvidia-smi says nothing: the driver's NVML library
+                from strata_control import nvidia_cards
+                if nvidia_cards.enabled():
+                    text = nvidia_cards.nvml_csv(["index", "compute_cap"])
+            cards = {int(i): int(round(float(c) * 10)) for i, c in (ln.split(",") for ln in text.strip().splitlines())}
         used = gpu_list(cfg) or sorted(cards)
         miss = sorted({cards[i] for i in used if i in cards and cards[i] not in archs and not (built.get("ptx") and cards[i] > max(archs))})
         if not miss:

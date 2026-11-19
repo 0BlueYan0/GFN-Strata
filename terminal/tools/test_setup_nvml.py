@@ -1,7 +1,7 @@
 """setup.py's card reads when nvidia-smi cannot be started (GeForce NOW: "Access is denied"): the driver's NVML library answers instead.
 No GPU needed: setup.out (the nvidia-smi call) and strata_control.nvidia_cards (the NVML reader) are given.
 
-    python tools/test_setup_nvml.py
+    python terminal/tools/test_setup_nvml.py
 """
 from __future__ import annotations
 

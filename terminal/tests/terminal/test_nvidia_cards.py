@@ -342,16 +342,20 @@ class CallSites(unittest.TestCase):
 
     def test_serve_arch_note_reads_the_cards_from_nvml(self):
         from serve import server
+        from serve.server_parts import engines
         self.csv.return_value = "0, 12.0\n"
         cfg = {"exe": "C:/engine/strata.exe"}
         built = {"archs": ["sm_89"]}
-        with mock.patch.object(server, "gpu_list", return_value=[]), self.smi(side_effect=DENIED):
+        with mock.patch.object(engines, "gpu_list", return_value=[]), self.smi(side_effect=DENIED):
             note = server.engine_arch_note(cfg, built=built)
         self.assertIn("sm_120", note or "")
         self.csv.assert_called_once_with(["index", "compute_cap"])
         self.csv.reset_mock()
-        with mock.patch.object(server, "gpu_list", return_value=[]), self.smi(side_effect=subprocess.TimeoutExpired("nvidia-smi", 10)):
+        with mock.patch.object(engines, "gpu_list", return_value=[]), self.smi(side_effect=subprocess.TimeoutExpired("nvidia-smi", 10)):
             self.assertIsNone(server.engine_arch_note(cfg, built=built))
+        self.csv.assert_not_called()
+        with mock.patch.object(engines, "gpu_list", return_value=[]), self.smi(return_value=mock.Mock(stdout="0, 12.0\n")):
+            self.assertIn("sm_120", server.engine_arch_note(cfg, built=built) or "")
         self.csv.assert_not_called()
 
 

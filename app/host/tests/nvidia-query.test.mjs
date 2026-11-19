@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { nvidiaQuery, nvidiaQuerySync, isGpuQuery } from '../server/nvidia-query.mjs';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { nvidiaQuery, nvidiaQuerySync, isGpuQuery, pythonTarget } from '../server/nvidia-query.mjs';
 import { readGpuTelemetry, parseNvidiaDevices, parseNvidiaReadings } from '../server/device-probes.mjs';
 
 const DEVICE_ARGS = ['--query-gpu=index,uuid,pci.bus_id,name,memory.total,driver_version', '--format=csv,noheader,nounits'];
@@ -8,6 +10,10 @@ const DEVICES = '0, GPU-11111111-2222-3333-4444-555555555555, 00000000:01:00.0, 
 const READING_ARGS = ['--query-gpu=uuid,temperature.gpu,utilization.gpu,memory.used,power.draw,power.limit,pcie.link.gen.current,pcie.link.gen.max,pcie.link.width.current,fan.speed,clocks.current.graphics', '--format=csv,noheader,nounits'];
 const READING = 'GPU-11111111-2222-3333-4444-555555555555, 41, 7, 47651, 35.20, 360.00, 5, 5, 16, 30, 2100';
 const TARGET = { command: 'py', args: ['-m', 'strata_control.nvidia_cards'], cwd: '.', env: {} };
+
+test('source checkout Python target contains the NVML module', () => {
+  assert.ok(existsSync(join(pythonTarget({ control: null }).cwd, 'strata_control', 'nvidia_cards.py')));
+});
 
 test('nvidia-smi answers: Python is not started', async () => {
   const python = [];

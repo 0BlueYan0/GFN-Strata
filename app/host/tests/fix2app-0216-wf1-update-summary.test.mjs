@@ -1,4 +1,5 @@
 import './helpers/isolate-profile.mjs';
+process.env.STRATA_APP_UPDATES = 'on';   // this build skips the app updater by default; these tests cover the app update flow itself
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, rmSync } from 'node:fs';

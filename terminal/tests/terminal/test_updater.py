@@ -52,7 +52,7 @@ class UpdaterCase(unittest.TestCase):
             patch = mock.patch.object(target, value, return_value=["sm_86"] if value == "cuda_archs_present" else "610.47")
             patch.start()
             self.addCleanup(patch.stop)
-        # this build takes no Control or App update from the feed (tests/terminal/test_self_update_off.py); these tests cover the update flows themselves
+        # this build takes no Control or App update from the feed (terminal/tests/terminal/test_self_update_off.py); these tests cover the update flows themselves
         patch = mock.patch.object(updater, "SELF_UPDATE_OFF", False)
         patch.start()
         self.addCleanup(patch.stop)
