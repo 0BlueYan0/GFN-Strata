@@ -1497,11 +1497,19 @@ def source_tree_version(root: Path | None = None) -> str | None:
     return found.group(1) if found else None
 
 
+# This fork takes no Control or App update from the upstream feed: a newer version comes from the installer on the fork's release page.
+# The engine and the drafter still update from the upstream feed.
+SELF_UPDATE_OFF = True
+
+
 def decide_control(feed: feedmod.Feed, ctx: Context, state: State) -> dict:
     here = ctx.hardware["platform"]
     pkg = next((p for p in feed.control if p.platform == here), None)
     installed = (active_control(ctx.components) or {}).get("version") or ec.runtime_version()
     report = {"installed": installed, "offered": pkg.version if pkg else None, "status": "not-in-feed", "download_bytes": 0}
+    if SELF_UPDATE_OFF:
+        report["offered"] = None
+        return report
     if pkg is None:
         return report
     report["download_bytes"] = pkg.size
@@ -1615,7 +1623,7 @@ def app_public_key(environ=None) -> str | None:
 
 def decide_app(feed: feedmod.Feed, ctx: Context) -> dict:
     report = {"installed": ctx.app_version, "offered": None, "status": "not-in-feed", "notes": "", "download_bytes": 0}
-    if feed.app is None:
+    if SELF_UPDATE_OFF or feed.app is None:
         return report
     entry = feed.app.for_platform(ctx.hardware["platform"])
     if entry is None:

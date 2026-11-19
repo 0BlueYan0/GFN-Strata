@@ -36,7 +36,8 @@ class Handover(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.comp = Path(self.temp.name) / "components"
         self.comp.mkdir()
-        self.env = {"STRATA_COMPONENTS_DIR": str(self.comp), handover.ENV_CHECKOUT: "1"}
+        # this build hands over only with the test switch (handover.ENV_UPDATED_CONTROL); Handover pins the hand-over itself
+        self.env = {"STRATA_COMPONENTS_DIR": str(self.comp), handover.ENV_CHECKOUT: "1", handover.ENV_UPDATED_CONTROL: "on"}
         self.calls, self.warnings = [], []
 
     def go(self, running="0.1.46", env=None, argv=("status",)):
@@ -150,7 +151,7 @@ class Handover(unittest.TestCase):
         (newer / "strata.py").write_text("import os,sys\nprint('control 99', os.environ.get('STRATA_HANDOVER'), sys.argv[1:])\nraise SystemExit(3)\n",
                                          encoding="utf-8")
         done = subprocess.run([sys.executable, str(ROOT / "strata.py"), "--version"], capture_output=True, text=True,
-                              env={**os.environ, "STRATA_COMPONENTS_DIR": str(self.comp), handover.ENV_CHECKOUT: "1"})
+                              env={**os.environ, "STRATA_COMPONENTS_DIR": str(self.comp), handover.ENV_CHECKOUT: "1", handover.ENV_UPDATED_CONTROL: "on"})
         self.assertEqual(done.returncode, 3, done.stderr)
         self.assertIn("control 99 1 ['--version']", done.stdout)
         # with the guard set the current Control runs, and says its own version
@@ -162,11 +163,73 @@ class Handover(unittest.TestCase):
     def test_the_entry_point_falls_back_when_the_target_is_broken(self):
         make_control(self.comp, "99.0.0", whole=False)
         done = subprocess.run([sys.executable, str(ROOT / "strata.py"), "--version"], capture_output=True, text=True,
-                              env={**os.environ, "STRATA_COMPONENTS_DIR": str(self.comp), handover.ENV_CHECKOUT: "1"})
+                              env={**os.environ, "STRATA_COMPONENTS_DIR": str(self.comp), handover.ENV_CHECKOUT: "1", handover.ENV_UPDATED_CONTROL: "on"})
         self.assertEqual(done.returncode, 0, done.stderr)
         self.assertTrue(done.stdout.startswith("strata "), done.stdout)
         self.assertEqual(len(done.stderr.strip().splitlines()), 1, done.stderr)
         self.assertIn("99.0.0", done.stderr)
+
+
+class HandoverOffInThisBuild(unittest.TestCase):
+    """Without STRATA_UPDATED_CONTROL=on a Control that the upstream updater installed is never used, and nothing is said about it."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="strata-handover-off-")
+        self.addCleanup(self.temp.cleanup)
+        self.comp = Path(self.temp.name) / "components"
+        self.comp.mkdir()
+        self.calls, self.warnings = [], []
+
+    def env(self, **extra):
+        base = {k: v for k, v in os.environ.items() if k != handover.ENV_UPDATED_CONTROL}
+        return {**base, "STRATA_COMPONENTS_DIR": str(self.comp), handover.ENV_CHECKOUT: "1", **extra}
+
+    def hand_over(self, env):
+        def fake(*args, **kwargs):
+            self.calls.append((args, kwargs))
+            return 7
+        return handover.maybe_hand_over(["status"], environ=env, running="0.1.46", execv=fake, run=fake, warn=self.warnings.append)
+
+    def test_a_newer_whole_control_is_not_handed_over_to(self):
+        make_control(self.comp, "0.1.46.1")
+        for env in (self.env(), self.env(STRATA_UPDATED_CONTROL="off"), self.env(STRATA_UPDATED_CONTROL="")):
+            self.assertIsNone(self.hand_over(env))
+        self.assertEqual((self.calls, self.warnings), ([], []))
+        self.hand_over(self.env(STRATA_UPDATED_CONTROL="on"))
+        self.assertEqual(len(self.calls), 1, "the switch brings the hand-over back")
+
+    def test_a_broken_newer_control_gives_no_warning(self):
+        make_control(self.comp, "0.1.46.1", whole=False)
+        self.assertIsNone(self.hand_over(self.env()))
+        self.assertEqual((self.calls, self.warnings), ([], []))
+
+    def test_the_pointer_is_not_even_read(self):
+        make_control(self.comp, "0.1.46.1")
+        original = handover.find_target
+        seen = []                                         # maybe_hand_over swallows any exception from find_target, so a failing stub would pass anyway
+
+        def record(*args, **kwargs):
+            seen.append(args)
+            return None, None, None
+        handover.find_target = record
+        try:
+            self.assertIsNone(self.hand_over(self.env()))
+        finally:
+            handover.find_target = original
+        self.assertEqual(seen, [])
+
+    def test_the_real_entry_point_does_not_hand_over(self):
+        newer = make_control(self.comp, "99.0.0")
+        marker = Path(self.temp.name) / "ran"
+        (newer / "strata.py").write_text("open(%r, 'w').write('x')\nprint('control 99')\n" % str(marker), encoding="utf-8")
+        py = handover.bundled_python(newer)
+        py.write_text("stub", encoding="utf-8")
+        done = subprocess.run([sys.executable, str(ROOT / "strata.py"), "--version"], capture_output=True, text=True, env=self.env())
+        self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertTrue(done.stdout.startswith("strata "), done.stdout)
+        self.assertNotIn("control 99", done.stdout)
+        self.assertFalse(marker.exists())
+        self.assertEqual(done.stderr.strip(), "")
 
 
 if __name__ == "__main__":

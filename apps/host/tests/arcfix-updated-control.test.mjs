@@ -10,6 +10,8 @@ import { createNativeControl } from '../server/native-control.mjs';
 
 // ARCFIX (0.2.13): a Control-only feed update (`strata update`, or Settings > Updates > Strata) writes <components>/control/active.json.
 // The packaged app must then run the model setup (tools/strata_mcp.py and the setup.py it starts) from THAT Control, not from the bundled one.
+// This build uses a Control from <components>/control/active.json only when STRATA_UPDATED_CONTROL=on (tests only), see findControl.
+const ON = { STRATA_UPDATED_CONTROL: 'on' };
 const isWin = process.platform === 'win32';
 const tmp = () => realpathSync(osTmpdir());
 
@@ -44,21 +46,21 @@ test('a four-part Control (0.1.59.1) from the feed beats the bundled 0.1.59, whe
   const f = fixture();
   try {
     // the Tauri shell sets STRATA_CONTROL_DIR to the bundled folder (apps/desktop/src-tauri/src/main.rs apply_runtime_policy)
-    const viaShell = findControl({ env: { STRATA_CONTROL_DIR: f.bundled }, hostDir: f.hostDir, components: f.components });
+    const viaShell = findControl({ env: { ...ON, STRATA_CONTROL_DIR: f.bundled }, hostDir: f.hostDir, components: f.components });
     assert.equal(viaShell.dir, f.updated);
     assert.equal(viaShell.bundle.version, '0.1.59.1');
-    assert.equal(findControl({ env: {}, hostDir: f.hostDir, components: f.components }).dir, f.updated);
+    assert.equal(findControl({ env: { ...ON }, hostDir: f.hostDir, components: f.components }).dir, f.updated);
     // the same Control, the same version: the bundled one stays (a tie goes to the first), so a feed that offers 0.1.59 again changes nothing
     writeFileSync(join(f.updated, 'BUNDLE.json'), JSON.stringify({ version: '0.1.59' }));
     writeFileSync(join(f.components, 'control', 'active.json'), JSON.stringify({ version: '0.1.59', folder: '0.1.59.1' }));
-    assert.equal(findControl({ env: { STRATA_CONTROL_DIR: f.bundled }, hostDir: f.hostDir, components: f.components }).dir, f.bundled);
+    assert.equal(findControl({ env: { ...ON, STRATA_CONTROL_DIR: f.bundled }, hostDir: f.hostDir, components: f.components }).dir, f.bundled);
   } finally { rmSync(f.root, { recursive: true, force: true }); }
 });
 
 test('the model setup of the packaged app runs from the updated Control: strata_mcp.py (and with it --src, the folder setup.py is started from) is the updated one', async () => {
   const f = fixture();
   try {
-    const found = findControl({ env: { STRATA_CONTROL_DIR: f.bundled }, hostDir: f.hostDir, components: f.components });
+    const found = findControl({ env: { ...ON, STRATA_CONTROL_DIR: f.bundled }, hostDir: f.hostDir, components: f.components });
     const spawned = [];
     const spawnProcess = (command, args, options) => {
       spawned.push({ command, args, options });
@@ -84,5 +86,19 @@ test('the model setup of the packaged app runs from the updated Control: strata_
     assert.equal(installer.args[installer.args.indexOf('--src') + 1], f.updated);
     assert.equal(installer.options.cwd, f.updated);
     assert.equal(installer.options.env.STRATA_CONTROL_DIR, f.updated);
+  } finally { rmSync(f.root, { recursive: true, force: true }); }
+});
+
+test('without the switch an updated Control that an upstream app installed is not used, even when it is newer and whole', () => {
+  const f = fixture();
+  try {
+    assert.equal(findControl({ env: { STRATA_CONTROL_DIR: f.bundled }, hostDir: f.hostDir, components: f.components }).dir, f.bundled);
+    assert.equal(findControl({ env: {}, hostDir: f.hostDir, components: f.components }).dir, f.bundled, 'the control folder beside the host');
+    assert.equal(findControl({ env: { STRATA_UPDATED_CONTROL: 'off' }, hostDir: f.hostDir, components: f.components }).dir, f.bundled);
+    assert.equal(findControl({ env: { STRATA_CONTROL_DIR: f.bundled, ...ON }, hostDir: f.hostDir, components: f.components }).dir, f.updated, 'the switch brings the old behaviour back');
+    // no bundled Control at all: the updated one alone is not enough
+    rmSync(f.bundled, { recursive: true, force: true });
+    assert.equal(findControl({ env: {}, hostDir: f.hostDir, components: f.components }), null);
+    assert.equal(findControl({ env: { ...ON }, hostDir: f.hostDir, components: f.components }).dir, f.updated);
   } finally { rmSync(f.root, { recursive: true, force: true }); }
 });

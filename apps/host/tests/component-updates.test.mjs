@@ -1,4 +1,5 @@
 import './helpers/isolate-profile.mjs';   // a test run never writes the owner's real Strata profile
+process.env.STRATA_APP_UPDATES = 'on';   // this build skips the app updater by default (the tests at the end of this file); the rest of the file covers the app update flow itself
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
@@ -40,7 +41,7 @@ test('an updated Control wins only when it is newer than the bundled one, and on
     const components = join(root, 'components');
     const updated = controlDir(join(components, 'control'), '0.1.46', '0.1.46');
     writeFileSync(join(components, 'control', 'active.json'), JSON.stringify({ version: '0.1.46', folder: '0.1.46' }));
-    const find = (extra = {}) => findControl({ env: {}, hostDir: join(install, 'host'), components, ...extra });
+    const find = (extra = {}) => findControl({ env: { STRATA_UPDATED_CONTROL: 'on' }, hostDir: join(install, 'host'), components, ...extra });
     assert.equal(find().dir, updated, 'the updated 0.1.46 beats the bundled 0.1.45');
     writeFileSync(join(bundled, 'BUNDLE.json'), JSON.stringify({ version: '0.1.47' }));
     assert.equal(find().dir, bundled, 'an app update that ships a newer Control is not held back by an older updated one');
@@ -450,4 +451,31 @@ test('the app updater and the host never reach the network by themselves: only c
   assert.equal(calls.length, 0, 'creating the updater makes no call');
   await updater.check();
   assert.equal(calls.length, 1);
+});
+
+test('this build skips the app updater: an update endpoint with nothing behind it (404) is no error in the Settings check', async () => {
+  process.env.STRATA_APP_UPDATES = 'off';
+  try {
+    let called = 0;
+    const missing = { check: async () => { called++; throw Object.assign(new Error('Could not fetch a valid release JSON from the remote (404)'), { code: 'app-update-failed' }); } };
+    const control = { version: '0.2.5', async updateCheck() { return { ok: true, feed: { sequence: 3 }, engine: { installed: { version: '0.1.50' }, offered: { version: '0.1.51' }, status: 'available', download_bytes: 5e8 }, control: { installed: '0.1.60', offered: null, status: 'not-in-feed' }, app: { status: 'not-in-feed' } }; } };
+    const result = await checkComponentUpdates({ control, appUpdater: missing, appVersion: '0.2.5' });
+    assert.equal(called, 0, 'the app updater is not asked');
+    assert.equal(result.strata.status, 'current');
+    assert.equal(result.strata.canInstall, false);
+    assert.equal(result.strata.details, undefined);
+    assert.equal(result.engine.status, 'available', 'the engine update is still offered');
+  } finally { process.env.STRATA_APP_UPDATES = 'on'; }
+});
+
+test('this build skips the app updater: Update Strata does not fail when the update endpoint has nothing', async () => {
+  process.env.STRATA_APP_UPDATES = 'off';
+  try {
+    const f = fixture({ withApp: true });       // an app updater that would offer 0.2.0 and install it
+    try {
+      const job = await finish(f.native, f.native.operation('update-strata', {}).id);
+      assert.equal(job.state, 'done', job.error);
+      assert.ok(!f.calls.some(c => c[0] === 'app-install'), 'the app updater is not asked');
+    } finally { await f.native.close(); f.cleanup(); }
+  } finally { process.env.STRATA_APP_UPDATES = 'on'; }
 });

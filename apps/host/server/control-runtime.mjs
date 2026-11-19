@@ -57,7 +57,10 @@ function newer(a, b) {
  * in that order. Returns null in a source checkout (the host then keeps its older paths).
  */
 export function findControl({ env = process.env, platform = process.platform, exists = existsSync, hostDir = resolve(HERE, '..'), components = null } = {}) {
-  const updated = updatedControlDirectory({ env, platform, components });
+  // This fork never installs a Control (strata_control/updater.py SELF_UPDATE_OFF), so an active.json in the components
+  // folder was written by the upstream app or Terminal on the same account. Using it would drop this build's NVML fallback
+  // and update block without any message. STRATA_UPDATED_CONTROL=on is for tests only: it keeps the coverage of that path.
+  const updated = env.STRATA_UPDATED_CONTROL === 'on' ? updatedControlDirectory({ env, platform, components }) : null;
   const candidates = [{ dir: env.STRATA_CONTROL_DIR }, { dir: join(hostDir, '..', 'control') }, ...(updated ? [updated] : [])]
     .filter(c => c.dir).map(c => ({ ...c, dir: resolve(c.dir) }));
   let best = null;

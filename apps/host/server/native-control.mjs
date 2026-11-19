@@ -18,6 +18,7 @@ import { createEngineStep } from './engine-step.mjs';
 import { dataFolderFromPick, isDriveRoot, makeFolder, rememberDataFolder, syncDataFolder, terminalSettingsFile } from './model-folder.mjs';
 import { createAutoTune, writeTuneConfig } from './native-autotune.mjs';
 import { plainError, PHASE_TEXT, UPDATE_WAITING_FOR_LOCK } from './update-messages.mjs';
+import { appUpdatesOff } from './updates.mjs';
 import { checkAndParseRunConfig, checkRunConfig, describeIssues } from './run-config-check.mjs';
 import { openTextFile } from './open-text-file.mjs';
 import { markEngine, engineRefusal } from './engine-version.mjs';
@@ -62,7 +63,7 @@ export function createNativeControl({directory,requests=()=>[],changed=()=>{},sp
  const appProgramNewerThan=started=>{try{const t=Date.parse(started);if(!Number.isFinite(t))return false;const dir=dirname(ROOT),exe=join(dir,process.platform==='win32'?'strata-desktop.exe':'strata-desktop'),times=[];for(const f of [exe,join(dir,'uninstall.exe')])if(existsSync(f)){const st=statSync(f);times.push(st.mtimeMs,st.ctimeMs);}/* the installer keeps the build time as the program's modified time but writes uninstall.exe and changes the program file's metadata when it installs */return times.some(x=>x>t);}catch{return false;}};
  const settledByAppUpdate=j=>closedForAppUpdate(j)&&j.kind==='update-strata'&&((typeof j.appUpdateFrom==='string'&&!!thisAppVersion()&&thisAppVersion()!==j.appUpdateFrom)||(typeof j.appUpdateFrom!=='string'&&appProgramNewerThan(j.startedAt)));
  const neverFinishedAppUpdate=j=>closedForAppUpdate(j)&&j.kind==='update-strata'&&typeof j.appUpdateFrom==='string'&&!!thisAppVersion()&&thisAppVersion()===j.appUpdateFrom;
- for(const j of (Array.isArray(savedJobs)?savedJobs:[]).slice(-12))jobs.set(j.id,{...j,...(settledByAppUpdate(j)?{state:'done',error:null,summary:`Strata is updated to ${thisAppVersion()}.`,finishedAt:new Date().toISOString()}:neverFinishedAppUpdate(j)?{state:'error',error:`The update to ${j.appUpdateTo??'the new version'} did not finish: the app closed for the installer, but the old version ${j.appUpdateFrom} started again. Try Update again, or download the installer from the Strata release page (https://github.com/Niko1221/Strata/releases/latest).`,summary:'The app update did not finish',finishedAt:new Date().toISOString()}:j.state==='running'?{state:'error',error:'The host restarted before completion. Check diagnostics, then retry; completed files are kept.',summary:'Interrupted operation'}:{})});
+ for(const j of (Array.isArray(savedJobs)?savedJobs:[]).slice(-12))jobs.set(j.id,{...j,...(settledByAppUpdate(j)?{state:'done',error:null,summary:`Strata is updated to ${thisAppVersion()}.`,finishedAt:new Date().toISOString()}:neverFinishedAppUpdate(j)?{state:'error',error:`The update to ${j.appUpdateTo??'the new version'} did not finish: the app closed for the installer, but the old version ${j.appUpdateFrom} started again. Try Update again, or download the installer from the Strata release page (https://github.com/0BlueYan0/GFN-Strata/releases).`,summary:'The app update did not finish',finishedAt:new Date().toISOString()}:j.state==='running'?{state:'error',error:'The host restarted before completion. Check diagnostics, then retry; completed files are kept.',summary:'Interrupted operation'}:{})});
  /* Packaged mode: the app ships Strata Control (control-runtime.mjs). Models are run configs in an install folder, the engine
     comes from the component folder, and a start is `strata runtime start` under the owner runtime. Nothing is installed,
     updated or fetched from here. Without `control` (a source checkout) every path below is the original one. */
@@ -658,7 +659,7 @@ return {summary:result.summary??'Deleted',removed:result.plan?.gb??null};}
   const done=await control.update({engine:false,control:true,onEvent,signal:job.abort.signal});
   updateLog(`Control step finished: ${updateSummary(done)}`);
   const notes=[updateSummary(done)];
-  if(appUpdater){
+  if(appUpdater&&!appUpdatesOff()){
    job.summary='Looking for a new version of the app…';emit();
    let verdict;
    try{verdict=await appUpdater.check();}catch(error){if(error?.code!=='app-update-unavailable')throw error;verdict={available:false};notes.push(appUpdater.unavailable||error.message);}

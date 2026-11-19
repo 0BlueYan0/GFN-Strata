@@ -1,5 +1,9 @@
 import { OFFLINE_MESSAGE, looksOffline, plainUpdateError } from './update-messages.mjs';
 
+/** This fork's update endpoint has no latest.json, so asking the app updater would make the Settings check fail; new versions come from the installer on the release page.
+ *  STRATA_APP_UPDATES=on is for tests only: it keeps the coverage of the app update flow. */
+export const appUpdatesOff = () => process.env.STRATA_APP_UPDATES !== 'on';
+
 /** Read-only release checks. Installing/rolling back needs a managed installer. */
 const RELEASES = 'https://api.github.com/repos/Niko1221/Strata/releases?per_page=30';
 const RELEASE_PREFIX = 'https://github.com/Niko1221/Strata/releases/';
@@ -83,7 +87,7 @@ export async function checkComponentUpdates({ control, appUpdater = null, appVer
   let appNotes = app.notes ?? '';
   let appCheckFailed = null;   // the shell's own (Tauri) check threw: before this, the Settings check hid it and showed only Control's text
   let appCannot = null;   // browser mode: the app window's updater is not running, so the app itself cannot be updated from here
-  if (appUpdater) {
+  if (appUpdater && !appUpdatesOff()) {
     try {
       const verdict = await appUpdater.check();
       appNew = verdict.available ? verdict.version : null;

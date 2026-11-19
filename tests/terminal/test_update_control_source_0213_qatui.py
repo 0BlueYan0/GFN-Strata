@@ -66,7 +66,8 @@ class DecisionIsUnchanged(unittest.TestCase):
     def test_the_staging_decision_does_not_look_at_the_source_tree(self):
         feed = SimpleNamespace(control=[SimpleNamespace(platform="linux-x86_64", version="0.1.56", size=123)])
         ctx = SimpleNamespace(hardware={"platform": "linux-x86_64"}, components=Path("."))
-        with mock.patch.object(updater, "active_control", return_value=None), mock.patch.object(ec, "runtime_version", return_value=None), \
+        with mock.patch.object(updater, "SELF_UPDATE_OFF", False), \
+                mock.patch.object(updater, "active_control", return_value=None), mock.patch.object(ec, "runtime_version", return_value=None), \
                 mock.patch.object(updater, "source_tree_version", side_effect=AssertionError("decide_control must not read the source tree")):
             report = updater.decide_control(feed, ctx, None)
         self.assertEqual((report["installed"], report["status"]), (None, "available"))

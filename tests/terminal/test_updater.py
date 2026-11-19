@@ -48,6 +48,10 @@ class UpdaterCase(unittest.TestCase):
             patch = mock.patch.object(target, value, return_value=["sm_86"] if value == "cuda_archs_present" else "610.47")
             patch.start()
             self.addCleanup(patch.stop)
+        # this build takes no Control or App update from the feed (tests/terminal/test_self_update_off.py); these tests cover the update flows themselves
+        patch = mock.patch.object(updater, "SELF_UPDATE_OFF", False)
+        patch.start()
+        self.addCleanup(patch.stop)
         ec.register_signature_verifier(None)               # a verifier an earlier test file left behind (it holds the shipped keys only) must not decide here
         self.addCleanup(ec.register_signature_verifier, None)
         # the tests sign with throwaway keys that they hand over explicitly: the release key shipped in update_keys.json is not in play here

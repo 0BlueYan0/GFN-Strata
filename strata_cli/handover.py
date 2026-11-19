@@ -21,6 +21,7 @@ from pathlib import Path
 
 ENV_GUARD = "STRATA_HANDOVER"
 ENV_OFF = "STRATA_NO_HANDOVER"
+ENV_UPDATED_CONTROL = "STRATA_UPDATED_CONTROL"       # tests only: this build does not use a Control the upstream updater installed
 ENV_CHECKOUT = "STRATA_HANDOVER_IN_CHECKOUT"         # tests only: allow a hand-over from a source checkout
 
 
@@ -128,6 +129,11 @@ def maybe_hand_over(argv, environ=None, root=None, running=None, execv=None, run
     (Windows; on POSIX the process is replaced and this does not return)."""
     environ = os.environ if environ is None else environ
     if environ.get(ENV_GUARD) or environ.get(ENV_OFF):
+        return None
+    # This fork never installs a Control, so an active.json here was written by the upstream app or Terminal on the same
+    # account. Handing over to it would drop this build's NVML fallback and update block without any message.
+    # STRATA_UPDATED_CONTROL=on is for tests only: it keeps the coverage of the hand-over.
+    if environ.get(ENV_UPDATED_CONTROL) != "on":
         return None
     if root is None and not environ.get(ENV_CHECKOUT) and running_from_checkout():
         return None                                      # a source checkout runs its own code, never an installed Control

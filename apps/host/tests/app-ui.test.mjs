@@ -1,3 +1,4 @@
+process.env.STRATA_APP_UPDATES = 'on';   // this build skips the app updater by default; the update check test below covers the app update flow itself
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
