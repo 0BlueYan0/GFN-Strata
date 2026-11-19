@@ -125,6 +125,18 @@ Use the driver required by the engine package. CUDA 13 needs driver 580 or newer
 [CUDA 12 route](OLDER_GPUS.md). Update it (NVIDIA App or [nvidia.com/drivers](https://www.nvidia.com/drivers)), restart the
 PC if needed, then open the app or rerun `strata launch`.
 
+**The app says "no NVIDIA GPU found (nvidia-smi did not answer)", or the Models and Monitor screens show no graphics card,
+but the PC has an NVIDIA card.**
+Some places do not let programs start `nvidia-smi.exe`: for example GeForce NOW, where the command prompt answers
+`Access is denied.`. Strata asks `nvidia-smi` first. When it cannot be started, Strata reads the card from the NVIDIA driver
+itself (its NVML library) and goes on. It then shows the card name, the memory, the driver version and the card's
+compute capability, and the Monitor shows memory use, temperature and load. When `nvidia-smi` works, nothing changes.
+On a PC where `nvidia-smi` works, we compared the two on one RTX 4070 SUPER (driver
+610.62): name, UUID, PCI address, total memory, compute capability, driver version, display flag and compute mode were
+identical. Not tested: PCs with more than one card (the order of the cards may differ), Linux, and GeForce NOW itself.
+If the card is still not found, the driver library is blocked too, and the message stays as it was. To switch this fallback
+off, set `STRATA_NVML_CARDS=0`.
+
 **Port 8080 is already in use, or I changed a running model's settings.**
 Strata may already be running: check `strata launch --status`. To replace your existing launch, rerun the intended command
 with `--restart`; it stops current answers. To run beside it, choose another port, for example `--port 8081`, if memory
