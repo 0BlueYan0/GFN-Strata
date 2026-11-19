@@ -3,8 +3,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import { existsSync } from 'node:fs';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync, realpathSync } from 'node:fs';
-import { join, basename } from 'node:path';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync, realpathSync, symlinkSync } from 'node:fs';
+import fs from 'node:fs';
+import { syncBuiltinESMExports } from 'node:module';
+import { join, basename, dirname } from 'node:path';
 import { tmpdir as osTmpdir } from 'node:os';
 // the canonical scratch root: on a Mac the temp folder is /var/folders/..., which resolves to /private/var/...; the paths the host reports are the resolved ones
 const tmpdir = () => realpathSync(osTmpdir());
@@ -90,7 +92,7 @@ test('runCli passes the arguments untouched (no shell) and reads JSON', async ()
 
 // ---------------------------------------------------------------------------------- native-control in packaged mode
 
-function packagedFixture({ engineUsable = true, updater = null, repair = false, ids = ['iq2_xs', 'iq3_s'], controlVersion = '0.1.45', extraSizes = [], cliStartWait = 'old', installPoll = null } = {}) {
+function packagedFixture({ engineUsable = true, updater = null, repair = false, ids = ['iq2_xs', 'iq3_s'], controlVersion = '0.1.45', extraSizes = [], cliStartWait = 'old', installPoll = null, configPathOf = path => path } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'strata-packaged-test-'));
   const install = join(root, 'install'), data = join(root, 'data');
   mkdirSync(install, { recursive: true });
@@ -125,7 +127,7 @@ function packagedFixture({ engineUsable = true, updater = null, repair = false, 
   let statusAnswer = { state: 'ready' }, metricsDown = false, healthDown = false;
   const control = {
     control: { dir: join(root, 'control'), python: join(root, 'control', 'python', 'python.exe') }, version: controlVersion,
-    async installedModels(options) { calls.push(['installedModels', options?.installDir ?? null]); return { install_dir: install, models: configs.map(c => ({ id: c.id, name: `Qwen ${c.id}`, source_config: c.path, component_status: 'present', context_tokens: 32768, backend: 'cuda', ...(/^deepseek/.test(c.id) ? { component_status: 'retired', retired: 'deepseek', name: 'DeepSeek-V4.1-Flash ISTA-DAS 2.00 bpw', retired_line: 'DeepSeek - no longer supported.', refusal: 'DeepSeek-V4.1-Flash ISTA-DAS 2.00 bpw is a DeepSeek model. This version of Strata no longer runs DeepSeek models, so it was not started. Choose a Qwen model to run instead. If you no longer need the DeepSeek files, you can delete that folder to free the space.' } : {}) })) }; },
+    async installedModels(options) { calls.push(['installedModels', options?.installDir ?? null]); return { install_dir: install, models: configs.map(c => ({ id: c.id, name: `Qwen ${c.id}`, source_config: configPathOf(c.path), component_status: 'present', context_tokens: 32768, backend: 'cuda', ...(/^deepseek/.test(c.id) ? { component_status: 'retired', retired: 'deepseek', name: 'DeepSeek-V4.1-Flash ISTA-DAS 2.00 bpw', retired_line: 'DeepSeek - no longer supported.', refusal: 'DeepSeek-V4.1-Flash ISTA-DAS 2.00 bpw is a DeepSeek model. This version of Strata no longer runs DeepSeek models, so it was not started. Choose a Qwen model to run instead. If you no longer need the DeepSeek files, you can delete that folder to free the space.' } : {}) })) }; },
     async engine() {
       calls.push(['engine']);
       return engineUsable
@@ -227,6 +229,36 @@ test('packaged: load = saved profile + runtime start under Control; unload = run
     assert.equal(f.native.state().instances.length, 1);
     assert.equal(f.others().length, 0, 'the host never spawned anything itself');
   } finally { await f.native.close(); f.cleanup(); }
+});
+
+// GeForce NOW keeps C:\Users\kiosk on a mounted drive: Control's resolve() names the run config I:\<id>\...\install\strata-x.json,
+// which opens, but the js realpathSync stops at I:\<id>, a folder that cannot be listed (ENOENT lstat). Here a link to the install
+// folder stands in for the mount and realpathSync is refused on it.
+test('packaged: a run config Control names through a mount the app cannot resolve still loads; a config outside the install is still refused', async t => {
+  let alias = null, outside = null;
+  const f = packagedFixture({ configPathOf: path => !alias ? path : path.endsWith('strata-iq3_s.json') ? outside : join(alias, basename(path)) });
+  try {
+    alias = join(dirname(f.install), 'mount');
+    symlinkSync(f.install, alias, isWin ? 'junction' : 'dir');
+    outside = join(dirname(f.install), 'data', 'strata-iq3_s.json');
+    mkdirSync(dirname(outside), { recursive: true });
+    writeFileSync(outside, readFileSync(join(f.install, 'strata-iq3_s.json')));
+    const real = fs.realpathSync, refused = alias.toLowerCase();
+    const js = (path, ...rest) => {
+      if (String(path).toLowerCase().startsWith(refused)) throw Object.assign(new Error(`ENOENT: no such file or directory, lstat '${alias}'`), { code: 'ENOENT' });
+      return real(path, ...rest);
+    };
+    js.native = real.native;
+    t.mock.method(fs, 'realpathSync', js);
+    syncBuiltinESMExports();
+    await f.native.refresh(true);
+    const loaded = await finish(f.native, f.native.operation('load', { model: 'iq2_xs' }).id);
+    assert.equal(loaded.state, 'done', loaded.error);
+    assert.deepEqual(f.calls.filter(c => ['saveProfile', 'start'].includes(c[0])).map(c => c.slice(0, 2)), [['saveProfile', 'app-1'], ['start', 'app-1']]);
+    const refusedLoad = await finish(f.native, f.native.operation('load', { model: 'iq3_s', multiple: true }).id);
+    assert.equal(refusedLoad.state, 'error');
+    assert.match(String(refusedLoad.error), /outside the Strata installation/);
+  } finally { t.mock.restoreAll(); syncBuiltinESMExports(); await f.native.close(); f.cleanup(); }
 });
 
 test('packaged: a DeepSeek model of an earlier Strata (an id with dots) is listed with its one line; its load is refused with Control\'s words and starts nothing', async () => {
