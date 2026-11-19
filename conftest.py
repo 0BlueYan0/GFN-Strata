@@ -65,6 +65,11 @@ if os.name != "nt" and not os.environ.get("STRATA_TEST_REAL_NVIDIA_SMI"):
         _f.write("#!/bin/sh\n# tests: no NVIDIA card can be read here (conftest.py): it answers nothing and fails, as without a loaded driver\nexit 1\n")
     os.chmod(os.path.join(_smi, "nvidia-smi"), 0o755)
     os.environ["PATH"] = _smi + os.pathsep + os.environ.get("PATH", "")
+# Callers that get no answer from nvidia-smi now ask the driver's own NVML library (strata_control/nvidia_cards.py): on a box with a real card that
+# would read the real card past every test that makes nvidia-smi fail and expects an empty list. Off for the run, child processes included; a test about
+# the NVML reader switches it on itself and injects a fake library.
+if not os.environ.get("STRATA_TEST_REAL_NVIDIA_SMI"):
+    os.environ.setdefault("STRATA_NVML_CARDS", "0")
 
 # No test reaches the network (lane NET, 11-10). A test whose fake was bypassed went to the real hosts (on 11-10 a non-hermetic test pulled
 # 1.2 GB), and one on a box without internet hung for the whole timeout. Every connect and every name lookup of this process is checked:

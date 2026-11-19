@@ -3,6 +3,9 @@ so, with the nvidia-smi check, instead of only the first line of the encoder's o
 
     python -m serve.test_vision_busy
 """
+import os as _nvml_os
+if not _nvml_os.environ.get("STRATA_TEST_REAL_NVIDIA_SMI"):   # these tests make nvidia-smi fail and expect no card: the driver's NVML must not answer for it (conftest.py does this under pytest)
+    _nvml_os.environ.setdefault("STRATA_NVML_CARDS", "0")
 import io
 import tempfile
 import unittest

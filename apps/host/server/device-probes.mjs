@@ -2,6 +2,10 @@
 import { readFile, readdir, realpath } from 'node:fs/promises';
 import { probe, round } from './util.mjs';
 import { windowsGpuReading } from './windows-gpu.mjs';
+import { nvidiaQuery } from './nvidia-query.mjs';
+
+/** The default runner of readGpuTelemetry: nvidia-smi, and for a `--query-gpu` call the bundled Python when nvidia-smi cannot start. */
+const nvidiaRun = (command, args, timeout) => (command === 'nvidia-smi' ? nvidiaQuery(args, timeout) : probe(command, args, timeout));
 
 /** Unified GPUs share one system memory pool; dedicated GPUs each have their own. */
 export function gpuMemoryTotals(devices, readings) {
@@ -89,7 +93,7 @@ export async function detectDrmGpus() {
   return result;
 }
 /** `transfer: false` skips the PCIe throughput sample (a second nvidia-smi); it only means something while a model runs. */
-export async function readGpuTelemetry(gpus, { transfer: wantTransfer = true, run = probe } = {}) {
+export async function readGpuTelemetry(gpus, { transfer: wantTransfer = true, run = nvidiaRun } = {}) {
   const now=new Date().toISOString();
   const hasNvidia=gpus.some(g=>g.vendor==='nvidia');
   let raw=hasNvidia?await run('nvidia-smi',['--query-gpu=uuid,temperature.gpu,utilization.gpu,memory.used,power.draw,power.limit,pcie.link.gen.current,pcie.link.gen.max,pcie.link.width.current,fan.speed,clocks.current.graphics','--format=csv,noheader,nounits'],2000):'';

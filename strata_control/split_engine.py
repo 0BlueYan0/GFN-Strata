@@ -342,11 +342,20 @@ def probe_nvidia_cards(indexes: list[int] | None = None) -> list[Card]:
     """The NVIDIA cards (all, or the named ones) with their name, memory and compute capability, from nvidia-smi; [] when it cannot say."""
     import subprocess
 
+    fields = "index,name,memory.total,compute_cap,memory.free"
     try:
-        out = subprocess.run(["nvidia-smi", "--query-gpu=index,name,memory.total,compute_cap,memory.free", "--format=csv,noheader,nounits"],
-                             capture_output=True, text=True, timeout=20).stdout
-    except (OSError, subprocess.SubprocessError):
+        done = subprocess.run(["nvidia-smi", f"--query-gpu={fields}", "--format=csv,noheader,nounits"],
+                              capture_output=True, text=True, timeout=20)
+        out = (done.stdout or "") if done.returncode == 0 else ""     # a failed nvidia-smi says nothing, as in engine_component._smi_query_now
+    except subprocess.TimeoutExpired:
         return []
+    except OSError:                                          # nvidia-smi cannot be started (GeForce NOW)
+        out = ""
+    except subprocess.SubprocessError:
+        return []
+    if not out.strip():                                      # no answer: the driver's NVML library
+        from strata_control import nvidia_cards
+        out = nvidia_cards.nvml_csv(fields.split(",")) if nvidia_cards.enabled() else ""
     cards = []
     for line in out.splitlines():
         parts = [p.strip() for p in line.split(",")]

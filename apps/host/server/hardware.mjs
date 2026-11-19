@@ -11,6 +11,7 @@ import { parseCpuTopology, parseWindowsProcessors, parseNvidiaDevices, detectDrm
 import { CONTEXT_TOKENS, VARIANTS, footprint } from './catalog.mjs';
 import { MODELS_DIR, diskFreeGb, diskTotalGb } from './store.mjs';
 import { probe, round } from './util.mjs';
+import { nvidiaQuery } from './nvidia-query.mjs';
 import { utf8Script } from './powershell-utf8.mjs';
 import { DX_ADAPTERS_SCRIPT, parseDxAdapters, windowsOtherGpus } from './windows-gpu.mjs';
 
@@ -177,7 +178,7 @@ async function detectGpus(platform, totalGb) {
     }
   }
 
-  const smi = await probe('nvidia-smi', ['--query-gpu=index,uuid,pci.bus_id,name,memory.total,driver_version','--format=csv,noheader,nounits']);
+  const smi = await nvidiaQuery(['--query-gpu=index,uuid,pci.bus_id,name,memory.total,driver_version','--format=csv,noheader,nounits'],4000,{pythonTimeout:10_000});   // runs only at start and when the 30 s cache expires, so a slow Python start is worth waiting for
   gpus.push(...parseNvidiaDevices(smi));
   if(platform==='linux') {
     const drm=await detectDrmGpus();

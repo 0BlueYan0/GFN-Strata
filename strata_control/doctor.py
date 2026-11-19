@@ -103,25 +103,44 @@ def _selected_indices(value: object) -> list[int] | None:
     return result
 
 
+def _nvml_card_text(fields: str) -> str | None:
+    """The cards as nvidia-smi's CSV text, read from the driver's NVML library; None when NVML says nothing (or is switched off)."""
+    from strata_control import nvidia_cards
+    if not nvidia_cards.enabled():
+        return None
+    return nvidia_cards.nvml_csv(fields.split(",")) or None
+
+
 def _nvidia_cards() -> tuple[list[dict] | None, str | None]:
     """One bounded, read-only host query. It does not establish engine compatibility."""
+    fields = "index,name,uuid,memory.total,driver_version"
     tool = shutil.which("nvidia-smi")
+    stdout = None
     if tool is None:
-        return None, "nvidia-smi is not installed or is not on PATH"
-    try:
-        result = subprocess.run(
-            [tool, "--query-gpu=index,name,uuid,memory.total,driver_version",
-             "--format=csv,noheader,nounits"], capture_output=True, text=True, errors="replace", timeout=5, check=False,
-        )
-    except (OSError, UnicodeError, subprocess.TimeoutExpired):
-        return None, "nvidia-smi could not complete within five seconds"
-    if result.returncode != 0:
-        return None, "nvidia-smi returned an error"
-    if len(result.stdout) > 65536:
+        stdout = _nvml_card_text(fields)             # nvidia-smi is not there: the driver's NVML library, if it answers
+        if stdout is None:
+            return None, "nvidia-smi is not installed or is not on PATH"
+    else:
+        try:
+            result = subprocess.run(
+                [tool, f"--query-gpu={fields}", "--format=csv,noheader,nounits"],
+                capture_output=True, text=True, errors="replace", timeout=5, check=False,
+            )
+        except subprocess.TimeoutExpired:
+            return None, "nvidia-smi could not complete within five seconds"
+        except (OSError, UnicodeError):
+            stdout = _nvml_card_text(fields)         # nvidia-smi cannot be started (GeForce NOW: "Access is denied")
+            if stdout is None:
+                return None, "nvidia-smi could not be started"
+        else:
+            if result.returncode != 0:
+                return None, "nvidia-smi returned an error"
+            stdout = result.stdout
+    if len(stdout) > 65536:
         return None, "nvidia-smi output exceeded the size limit"
     cards = []
     try:
-        for row in csv.reader(io.StringIO(result.stdout)):
+        for row in csv.reader(io.StringIO(stdout)):
             if len(row) != 5 or len(cards) >= 64:
                 raise ValueError("invalid field count")
             index_raw, name, uuid, memory_raw, driver = [part.strip() for part in row]

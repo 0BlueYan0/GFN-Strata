@@ -942,13 +942,24 @@ def _smi_query(field_name: str) -> list[str]:
 def _smi_query_now(field_name: str) -> list[str]:
     tool = shutil.which("nvidia-smi")
     if not tool:
-        return []
+        return _nvml_query(field_name)
     try:
         done = subprocess.run([tool, f"--query-gpu={field_name}", "--format=csv,noheader"], capture_output=True,
                               timeout=8, text=True, errors="replace", creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    except subprocess.TimeoutExpired:
+        return []                     # a stuck driver: NVML in this process would not come back either
     except (OSError, subprocess.SubprocessError):
+        return _nvml_query(field_name)   # nvidia-smi cannot be started (GeForce NOW: "Access is denied")
+    found = [line.strip() for line in (done.stdout or "").splitlines() if line.strip()] if done.returncode == 0 and done.stdout else []
+    return found or _nvml_query(field_name)
+
+
+def _nvml_query(field_name: str) -> list[str]:
+    """The same one field from the driver's NVML library, when nvidia-smi gave nothing; [] when NVML cannot say either (or is switched off)."""
+    from strata_control import nvidia_cards
+    if not nvidia_cards.enabled():
         return []
-    return [line.strip() for line in (done.stdout or "").splitlines() if line.strip()] if done.returncode == 0 and done.stdout else []
+    return [row[0].strip() for row in nvidia_cards.nvml_rows([field_name]) if row and row[0].strip()]
 
 
 def nvidia_driver_version() -> str | None:

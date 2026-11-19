@@ -80,10 +80,14 @@ def gpus() -> list[dict[str, Any]]:
     their name only where it is known, and leave the memory unreadable."""
     out: list[dict[str, Any]] = []
     smi = shutil.which("nvidia-smi")
-    if smi:
-        text = _run([smi, "--query-gpu=index,name,memory.total,memory.used,driver_version",
-                     "--format=csv,noheader,nounits"])
-        for line in (text or "").splitlines():
+    fields = "index,name,memory.total,memory.used,driver_version"
+    text = _run([smi, f"--query-gpu={fields}", "--format=csv,noheader,nounits"]) if smi else None
+    if not (text or "").strip():                     # no nvidia-smi, or it cannot be started (GeForce NOW) or says nothing: the driver's NVML library
+        from strata_control import nvidia_cards
+        if nvidia_cards.enabled():
+            text = nvidia_cards.nvml_csv(fields.split(","))
+    if text:
+        for line in text.splitlines():
             parts = [p.strip() for p in line.split(",")]
             if len(parts) >= 5:
                 try:

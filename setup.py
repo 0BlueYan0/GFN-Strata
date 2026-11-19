@@ -70,6 +70,7 @@ tls.install()      # #3722: HTTPS checks the server against the operating system
 from strata_control import atomic
 from strata_control import draft_layer
 from strata_control import engine_component
+from strata_control import nvidia_cards
 from strata_control import sysinfo
 from strata_control.discovery import in_trash
 from strata_control import user_args
@@ -1616,9 +1617,16 @@ def _cpuid_avx2() -> bool:
 
 
 def gpus():
-    """Every NVIDIA GPU, numbered as nvidia-smi numbers them (by PCI bus, the order the engine is told to use)."""
-    s = out(["nvidia-smi", "--query-gpu=index,name,memory.total,compute_cap,driver_version",
-             "--format=csv,noheader,nounits"])
+    """Every NVIDIA GPU, numbered as nvidia-smi numbers them (by PCI bus, the order the engine is told to use).
+    When nvidia-smi gives no card (GeForce NOW does not let it start), the driver's NVML library is asked instead."""
+    fields = "index,name,memory.total,compute_cap,driver_version"
+    found = _parse_gpus(out(["nvidia-smi", f"--query-gpu={fields}", "--format=csv,noheader,nounits"]))
+    if not found and nvidia_cards.enabled():
+        found = _parse_gpus(nvidia_cards.nvml_csv(fields.split(",")))
+    return found
+
+
+def _parse_gpus(s):
     found = []
     for line in s.strip().splitlines():
         try:
@@ -1645,14 +1653,20 @@ def gpus():
 def gpu_drives_display(g) -> bool:
     """#779: True when nvidia-smi says this card has a display attached (display_active Enabled): its desktop needs
     VRAM too, and a full expert cache beside it has crashed laptops."""
-    text = out(["nvidia-smi", "-i", str(g.get("index", 0)), "--query-gpu=display_active", "--format=csv,noheader"])
+    index = g.get("index", 0)
+    text = out(["nvidia-smi", "-i", str(index), "--query-gpu=display_active", "--format=csv,noheader"])
+    if not text.strip() and nvidia_cards.enabled():
+        text = nvidia_cards.nvml_csv(["display_active"], index=index)
     return text.strip().lower() == "enabled"
 
 
 def gpu_compute_mode(index: int) -> str:
     """#1445: nvidia-smi's compute mode for this card ("Default", "Exclusive_Process", "Prohibited", ...); "" when it
     does not say."""
-    return out(["nvidia-smi", "-i", str(index), "--query-gpu=compute_mode", "--format=csv,noheader"]).strip()
+    text = out(["nvidia-smi", "-i", str(index), "--query-gpu=compute_mode", "--format=csv,noheader"]).strip()
+    if not text and nvidia_cards.enabled():
+        text = nvidia_cards.nvml_csv(["compute_mode"], index=index).strip()
+    return text
 
 
 def compute_mode_warning(index: int, mode: str) -> str | None:

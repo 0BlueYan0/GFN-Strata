@@ -1739,8 +1739,19 @@ def own_ram_gb() -> float:
 
 
 def own_nvidia_gpus() -> list:
-    s = run_quiet(["nvidia-smi", "--query-gpu=index,name,memory.total,compute_cap,driver_version",
-                   "--format=csv,noheader,nounits"])
+    fields = "index,name,memory.total,compute_cap,driver_version"
+    found = _parse_own_nvidia_gpus(run_quiet(["nvidia-smi", f"--query-gpu={fields}", "--format=csv,noheader,nounits"]))
+    if not found:                     # nvidia-smi cannot be started (GeForce NOW) or says nothing: the driver's NVML library, in this process
+        try:
+            from strata_control import nvidia_cards
+        except ImportError:           # an older Control folder without it: the answer is what it was
+            return found
+        if nvidia_cards.enabled():
+            found = _parse_own_nvidia_gpus(nvidia_cards.nvml_csv(fields.split(",")))
+    return found
+
+
+def _parse_own_nvidia_gpus(s: str) -> list:
     found = []
     for line in s.strip().splitlines():
         try:
@@ -1766,7 +1777,15 @@ def own_nvidia_gpus() -> list:
 def nvidia_display_active() -> dict:
     """{GPU index: True when a display is attached to the card} from nvidia-smi (display_active Enabled); {} when it says nothing."""
     found = {}
-    for line in run_quiet(["nvidia-smi", "--query-gpu=index,display_active", "--format=csv,noheader"]).strip().splitlines():
+    text = run_quiet(["nvidia-smi", "--query-gpu=index,display_active", "--format=csv,noheader"])
+    if not text.strip():
+        try:
+            from strata_control import nvidia_cards
+        except ImportError:           # an older Control folder without it: nothing is said
+            return found
+        if nvidia_cards.enabled():
+            text = nvidia_cards.nvml_csv(["index", "display_active"])
+    for line in text.strip().splitlines():
         idx, _, state = line.partition(",")
         if idx.strip().isdigit() and state.strip().lower() in ("enabled", "disabled"):
             found[int(idx)] = state.strip().lower() == "enabled"

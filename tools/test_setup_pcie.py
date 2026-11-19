@@ -5,6 +5,9 @@ lanes than it has.  No GPU needed: nvidia-smi's answer is given.
 """
 from __future__ import annotations
 
+import os as _nvml_os
+if not _nvml_os.environ.get("STRATA_TEST_REAL_NVIDIA_SMI"):   # these tests make nvidia-smi fail and expect no card: the driver's NVML must not answer for it (conftest.py does this under pytest)
+    _nvml_os.environ.setdefault("STRATA_NVML_CARDS", "0")
 import sys
 import unittest
 from pathlib import Path

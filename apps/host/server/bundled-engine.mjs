@@ -14,6 +14,7 @@ import { execFileSync } from 'node:child_process';
 import { copyFile, mkdir, readdir, readFile, rename, rm, stat } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { dirname, join, resolve, sep } from 'node:path';
+import { nvidiaQuerySync } from './nvidia-query.mjs';
 
 const MANIFEST = 'engine-component.json';
 
@@ -57,7 +58,7 @@ export function nvidiaDriverVersion() {
     if (found) return found[1];
   } catch { /* not Linux, or no NVIDIA driver */ }
   try {
-    const out = execFileSync('nvidia-smi', ['--query-gpu=driver_version', '--format=csv,noheader'], { encoding: 'utf8', timeout: 8000, windowsHide: true, stdio: ['ignore', 'pipe', 'ignore'] });
+    const out = nvidiaQuerySync(['--query-gpu=driver_version', '--format=csv,noheader'], 8000);
     const versions = out.split(/\r?\n/).map(line => line.trim()).filter(line => /^\d+(\.\d+)+$/.test(line));
     if (versions.length) return versions.sort(compareVersions)[0];
   } catch { /* no nvidia-smi */ }
