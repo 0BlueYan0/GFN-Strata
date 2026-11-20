@@ -1129,6 +1129,9 @@ async function api(req, res, path, method, url) {
   const nativeSettingsFile=/^\/api\/native\/models\/([a-z0-9_.-]+)\/settings-file$/.exec(path);
   if(nativeSettingsFile&&method==='GET')return json(res,200,native.settingsFile(nativeSettingsFile[1]));
   if(nativeSettingsFile&&method==='POST')return json(res,200,await native.openSettingsFile(nativeSettingsFile[1]));
+  const nativeControlVector=/^\/api\/native\/models\/([a-z0-9_.-]+)\/control-vector$/.exec(path);
+  if(nativeControlVector&&method==='GET')return json(res,200,native.controlVector(nativeControlVector[1]));
+  if(nativeControlVector&&method==='PATCH')return json(res,200,native.saveControlVector(nativeControlVector[1],await readBody(req)));
 
   // Credentials are handled only on the host. Responses and events expose a key-set flag.
   return error(res,404,'Unknown native control action.');}catch(e){return error(res,/Finish|Unload|running|current operation/.test(e.message)?409:400,e.message,{...(e.code&&typeof e.code==='string'?{code:e.code}:{}),...(e.details?{details:String(e.details)}:{})});}}

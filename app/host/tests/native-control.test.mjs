@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync,readdirSync,mkdirSync,writeFileSync} from 'node:fs';
+import {readFileSync,readdirSync,mkdirSync,writeFileSync,unlinkSync} from 'node:fs';
 import {join} from 'node:path';
 import {nativeFixture,finishJob} from './helpers/native-fixture.mjs';
 test('native instances isolate devices, ports, IDs and private keys; default loading switches one model',async()=>{
@@ -43,3 +43,54 @@ test('a model the person pointed at their own GGUF folder keeps that folder for 
  const call=f.rpcCalls.filter(c=>c.name==='strata_install').pop();assert.equal(call.arguments.gguf_dir,own);assert.equal(call.arguments.data_dir,undefined,'the person\'s folder is not the data folder');
  await f.control.plan({family:'qwen',model:'IQ3_S',context:131072});const other=f.rpcCalls.filter(c=>c.name==='strata_install').pop();assert.equal(other.arguments.gguf_dir,undefined,'a model Strata downloaded itself keeps its normal folders');
 }finally{await f.cleanup();}});
+
+/* The control vector setting (server/control-vector.mjs): saved from the model screen, it reaches the engine's start as the four options. No engine runs in the
+   fixture, so this is the automatic check that a saved choice gets as far as the run file the engine is started with. */
+test('a saved control vector reaches the load as its four options; off takes them away; a vector file that is gone stops the load in plain words', async () => {
+  const f = nativeFixture();
+  try {
+    const saved = join(f.repo, 'strata-iq2_xs.json'), config = JSON.parse(readFileSync(saved, 'utf8'));
+    config.args_written = [...config.args];   // what setup leaves in a run config: the app's own options are told apart from the person's
+    writeFileSync(saved, JSON.stringify(config));
+    await f.control.refresh(true);
+    const folder = join(f.repo, 'data', 'experimental-speed-projection');
+    mkdirSync(folder, { recursive: true });
+    writeFileSync(join(folder, 'Qwen3.8-Flash-Next-experimental-speed-projection.gguf'), 'vector');
+    const own = join(f.directory, 'mine.gguf');
+    writeFileSync(own, 'vector');
+    const runFile = () => { const dir = join(f.directory, 'native-instances'); return JSON.parse(readFileSync(join(dir, readdirSync(dir)[0]), 'utf8')); };
+    const load = async () => finishJob(f.control, f.control.operation('load', { model: 'iq2_xs', gpus: [0] }).id);
+    assert.equal(f.control.controlVector('iq2_xs').supported, true);
+    f.control.saveControlVector('iq2_xs', { enabled: true, source: 'builtin', scale: 1, first: 4, last: 44, mode: 'project', dir: 'per-layer' });
+    const done = await load();
+    assert.equal(done.state, 'done', done.error);
+    const args = runFile().args, at = args.indexOf('--control-vector-scaled');
+    assert.ok(args[at + 1].endsWith('Qwen3.8-Flash-Next-experimental-speed-projection.gguf:1'));
+    assert.deepEqual(args.slice(at + 2), ['--control-vector-layer-range', '4', '44', '--cvec-mode', 'project', '--cvec-dir', 'per-layer']);
+    assert.ok(args.includes('--max-context'), 'the other options stay');
+    await f.control.unload(done.result.instanceId);
+    f.control.saveControlVector('iq2_xs', { enabled: false });
+    const off = await load();
+    assert.equal(off.state, 'done', off.error);
+    assert.equal(runFile().args.some(a => a.startsWith('--cvec') || a.startsWith('--control-vector')), false);
+    await f.control.unload(off.result.instanceId);
+    f.control.saveControlVector('iq2_xs', { enabled: true, source: 'custom', path: own, scale: 2, first: 1, last: 47, mode: 'add', dir: 'per-layer' });
+    unlinkSync(own);
+    const gone = await load();
+    assert.equal(gone.state, 'error');
+    assert.match(gone.error, /control vector file .*mine\.gguf does not exist/);
+    // a hand-written --control-vector takes a bare .gguf path: the sentence that names the file comes before the generic "missing GGUF" one
+    await f.control.unload(gone.result?.instanceId ?? '').catch(() => undefined);
+    const missing = join(f.directory, 'hand-written-missing.gguf');
+    const record = JSON.parse(readFileSync(saved, 'utf8'));
+    for (const key of ['args', 'args_written', 'user_args']) delete record[key];
+    record.args = ['--max-context', '32768'];
+    record.user_args = ['--control-vector', missing];
+    writeFileSync(saved, JSON.stringify(record));
+    const hand = await load();
+    assert.equal(hand.state, 'error');
+    assert.ok(hand.error.includes(missing), `the error names the file: ${hand.error}`);
+    assert.match(hand.error, /control vector file/);
+    assert.doesNotMatch(hand.error, /An engine argument names a missing GGUF/);
+  } finally { await f.cleanup(); }
+});

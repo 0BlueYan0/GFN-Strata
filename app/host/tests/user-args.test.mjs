@@ -145,24 +145,28 @@ test('3270: a 0.2.0-beta file (the app wrote 1536 itself) is not taken for the p
 
 test('3216: engine arguments the app does not know (control vectors) survive a load and a setup run that rewrites "args"', async () => {
   // setup wrote ARGS (and a copy of them); the person typed the control vector options into the JSON editor
-  const f = fixture({ args: [...ARGS, ...CVEC], args_written: ARGS });
+  // the vector file is real: a load stops, in plain words, when a control vector file named in the run config is not there (server/control-vector.mjs)
+  const vecDir = mkdtempSync(join(tmpdir(), 'strata-userargs-vec-'));
+  writeFileSync(join(vecDir, 'mine.gguf'), 'vector');
+  const VEC = CVEC.map(a => (a === 'C:/vectors/mine.gguf:1.0' ? `${join(vecDir, 'mine.gguf').replaceAll(String.fromCharCode(92), '/')}:1.0` : a));
+  const f = fixture({ args: [...ARGS, ...VEC], args_written: ARGS });
   try {
     await f.native.refresh(true);
     const run = await load(f, { resourceProfile: 'work' });
-    assert.deepEqual(run.args.slice(run.args.indexOf('--control-vector-scaled'), run.args.indexOf('--control-vector-scaled') + 9), CVEC);
+    assert.deepEqual(run.args.slice(run.args.indexOf('--control-vector-scaled'), run.args.indexOf('--control-vector-scaled') + 9), VEC);
     const file = f.read();
-    assert.deepEqual(file.user_args, CVEC);
-    assert.ok(file.args.join(' ').includes(CVEC.join(' ')), 'the file keeps them in "args" too');
+    assert.deepEqual(file.user_args, VEC);
+    assert.ok(file.args.join(' ').includes(VEC.join(' ')), 'the file keeps them in "args" too');
     // a setup run rewrites "args" from its own choices and carries user_args along (setup.py carry_user_args)
     f.write({ ...file, args: [...ARGS, '--max-context', '65536'], args_written: undefined });
     const again = await load(f, { resourceProfile: 'work' });
-    assert.ok(again.args.join(' ').includes(CVEC.join(' ')), 'still there after the rewrite');
+    assert.ok(again.args.join(' ').includes(VEC.join(' ')), 'still there after the rewrite');
     assert.equal(again.args.filter(a => a === '--cvec-mode').length, 1);
-    assert.deepEqual(f.read().user_args, CVEC);
+    assert.deepEqual(f.read().user_args, VEC);
     // removing them from "user_args" and "args" by hand takes them off for good
     const bare = f.read(); bare.user_args = undefined; bare.args = [...ARGS]; bare.args_written = [...ARGS]; f.write(bare);
     assert.ok(!(await load(f, { resourceProfile: 'work' })).args.includes('--cvec-mode'));
-  } finally { await f.native.close(); f.cleanup(); }
+  } finally { await f.native.close(); f.cleanup(); rmSync(vecDir, { recursive: true, force: true }); }
 });
 
 test('3216: without any resource preference the load keeps them too, and the person\'s value beats a generated one for the same option', async () => {
