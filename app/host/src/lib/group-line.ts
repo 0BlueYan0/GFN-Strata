@@ -17,7 +17,7 @@ const KINDS: { kind: string; verb: string; noun: [string, string]; one: string; 
 ];
 /** Languages whose sentence parts after the first start with a small letter, as in English ("Ran a command, read a file"). */
 const SMALL_AFTER_FIRST = new Set(['en', 'es', 'fr', 'pt', 'ru']);
-const JOIN: Record<string, string> = { ja: '\u3001', zh: '\uff0c' };
+const JOIN: Record<string, string> = { ja: '\u3001', zh: '\uff0c', 'zh-TW': '\uff0c' };
 
 /** One part of the host's sentence as (phrase key, count), or null. Its first letter may be small (the parts after the first). */
 export function readPart(part: string): { one: string; many: string; n: number } | null {

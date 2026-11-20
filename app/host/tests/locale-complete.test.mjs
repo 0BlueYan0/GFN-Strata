@@ -11,21 +11,21 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const APP = join(here, '..', 'src', 'locales');
 const WEB = join(here, '..', '..', '..', 'terminal', 'serve', 'web', 'locales');
-const LANGS = ['zh', 'ja', 'de', 'es', 'ru', 'pt', 'ko', 'fr', 'he'];
+const LANGS = ['zh', 'zh-TW', 'ja', 'de', 'es', 'ru', 'pt', 'ko', 'fr', 'he'];
 const load = file => JSON.parse(readFileSync(file, 'utf8'));
 
 /** family -> { lang -> parsed catalog }: app:main (en.json ...), app:<fam> (<fam>-en.json ...), web (serve/web/locales). */
 export function catalogs(appDir = APP, webDir = WEB) {
   const out = new Map();
   for (const f of readdirSync(appDir)) {
-    const m = /^(?:(.+)-)?([a-z]{2})\.json$/.exec(f);
+    const m = /^(?:(.+)-)?([a-z]{2}(?:-[A-Z]{2})?)\.json$/.exec(f);
     if (!m) continue;
     const fam = `app:${m[1] ?? 'main'}`;
     if (!out.has(fam)) out.set(fam, {});
     out.get(fam)[m[2]] = load(join(appDir, f));
   }
   const web = {};
-  for (const f of readdirSync(webDir)) { const m = /^([a-z]{2})\.json$/.exec(f); if (m) web[m[1]] = load(join(webDir, f)); }
+  for (const f of readdirSync(webDir)) { const m = /^([a-z]{2}(?:-[A-Z]{2})?)\.json$/.exec(f); if (m) web[m[1]] = load(join(webDir, f)); }
   out.set('web', web);
   return out;
 }

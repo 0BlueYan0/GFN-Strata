@@ -243,7 +243,7 @@ test('#4722 paragraphs, lists and quotes share one measure; tables and code bloc
 test('#3723 a first start opens in the first of the computer\'s languages that Strata has', async () => {
   const { detectLanguage } = await withI18n('language-detect.ts');
   assert.equal(detectLanguage(['zh-CN', 'en']), 'zh');
-  assert.equal(detectLanguage(['zh-TW']), 'zh');
+  assert.equal(detectLanguage(['zh-TW']), 'zh-TW');
   assert.equal(detectLanguage(['pt-BR']), 'pt');
   assert.equal(detectLanguage(['sv-SE', 'de-DE', 'en']), 'de', 'the first one that is offered, not the first one');
   assert.equal(detectLanguage(['ja']), 'ja');

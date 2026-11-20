@@ -555,7 +555,7 @@ export function dismissToast(id: string) {
 function applyPrefs() {
   const root = document.documentElement;
   void setTranslationLanguage(state.language);
-  root.lang = state.language === 'zh' ? 'zh-CN' : state.language;
+  root.lang = state.language === 'zh' ? 'zh-CN' : state.language; // zh-TW stays as it is
   root.dir = state.language === 'he' ? 'rtl' : 'ltr';             // #6060: Hebrew reads right to left
   if(state.fontFamily)root.style.setProperty('--st-font',`${JSON.stringify(state.fontFamily)},system-ui,-apple-system,"Segoe UI",sans-serif`);
   else root.style.removeProperty('--st-font');

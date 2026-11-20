@@ -7,10 +7,10 @@ import { readFileSync } from 'node:fs';
 import { LANGUAGES as SHELL } from '../server/shell-prefs.mjs';
 
 const read = rel => readFileSync(new URL(rel, import.meta.url), 'utf8');
-const app = [...read('../src/lib/i18n.ts').match(/export const LANGUAGES=\[(.*?)\] as const;/s)[1].matchAll(/value:'([a-z]{2})'/g)].map(m => m[1]);
+const app = [...read('../src/lib/i18n.ts').match(/export const LANGUAGES=\[(.*?)\] as const;/s)[1].matchAll(/value:'([a-z]{2}(?:-[A-Z]{2})?)'/g)].map(m => m[1]);
 const rs = read('../../desktop/src-tauri/src/shell.rs');
-const rsLanguages = [...rs.match(/pub const LANGUAGES: \[&str; \d+\] = \[(.*?)\];/s)[1].matchAll(/"([a-z]{2})"/g)].map(m => m[1]);
-const trayArms = [...rs.match(/pub fn tray_labels[\s\S]*?\n}\n/)[0].matchAll(/^\s*"([a-z]{2})" => \(/gm)].map(m => m[1]);
+const rsLanguages = [...rs.match(/pub const LANGUAGES: \[&str; \d+\] = \[(.*?)\];/s)[1].matchAll(/"([a-z]{2}(?:-[A-Z]{2})?)"/g)].map(m => m[1]);
+const trayArms = [...rs.match(/pub fn tray_labels[\s\S]*?\n}\n/)[0].matchAll(/^\s*"([a-z]{2}(?:-[A-Z]{2})?)" => \(/gm)].map(m => m[1]);
 
 test('the app\'s languages, the host\'s shell prefs and the Tauri shell agree', () => {
   assert.ok(app.length >= 9 && app.includes('fr'), `the app's list (${app})`);

@@ -10,13 +10,13 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const APP = join(here, '..', 'src', 'locales');
 const WEB = join(here, '..', '..', '..', 'terminal', 'serve', 'web', 'locales');
-const LANGS = ['zh', 'ja', 'de', 'es', 'ru', 'pt', 'ko', 'fr', 'he'];
+const LANGS = ['zh', 'zh-TW', 'ja', 'de', 'es', 'ru', 'pt', 'ko', 'fr', 'he'];
 
 // family name -> { lang -> file } for the app catalogs (main = en.json, family = <fam>-en.json), plus the web page's catalogs
 function families() {
   const out = new Map();
   for (const f of readdirSync(APP)) {
-    const m = /^(?:(.+)-)?([a-z]{2})\.json$/.exec(f);
+    const m = /^(?:(.+)-)?([a-z]{2}(?:-[A-Z]{2})?)\.json$/.exec(f);
     if (!m) continue;
     const fam = `app:${m[1] ?? 'main'}`;
     if (!out.has(fam)) out.set(fam, {});
@@ -24,7 +24,7 @@ function families() {
   }
   if (existsSync(WEB)) {
     const web = {};
-    for (const f of readdirSync(WEB)) { const m = /^([a-z]{2})\.json$/.exec(f); if (m) web[m[1]] = join(WEB, f); }
+    for (const f of readdirSync(WEB)) { const m = /^([a-z]{2}(?:-[A-Z]{2})?)\.json$/.exec(f); if (m) web[m[1]] = join(WEB, f); }
     out.set('web', web);
   }
   return out;

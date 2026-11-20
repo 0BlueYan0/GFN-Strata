@@ -25,7 +25,7 @@ UA:UAH UG:UGX UM:USD US:USD UY:UYU UZ:UZS VA:EUR VC:XCD VE:VES VG:USD VI:USD VN:
 export const REGION_CURRENCY: Readonly<Record<string, string>> = Object.freeze(Object.fromEntries(PAIRS.split(/\s+/).map(pair => pair.split(':') as [string, string])));
 
 /** The region of each app language that has one region of its own; English and Spanish-speaking countries are many, so only the first is a guess. */
-export const LANGUAGE_REGION: Readonly<Record<string, string>> = Object.freeze({ zh: 'CN', ja: 'JP', de: 'DE', es: 'ES', ru: 'RU', pt: 'BR', ko: 'KR' });
+export const LANGUAGE_REGION: Readonly<Record<string, string>> = Object.freeze({ zh: 'CN', 'zh-TW': 'TW', ja: 'JP', de: 'DE', es: 'ES', ru: 'RU', pt: 'BR', ko: 'KR' });
 
 export const currencyForRegion = (region: string | null | undefined): string | null => (region ? REGION_CURRENCY[region.toUpperCase()] ?? null : null);
 
