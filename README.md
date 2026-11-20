@@ -1,87 +1,84 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="apps/host/public/brand/strata-lockup-dark.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="app/host/public/brand/strata-lockup-dark.svg">
     <img src="app/host/public/brand/strata-lockup-light.svg" alt="Strata" width="340">
   </picture>
 </p>
 
-<h3 align="center">Run powerful AI on your own computer.</h3>
-<p align="center">Chat, code and work with images, locally.</p>
+<h3 align="center">Strata for NVIDIA GeForce NOW</h3>
+<p align="center">An unofficial fork of <a href="https://github.com/Niko1221/Strata">Strata</a> that runs the desktop app on a GeForce NOW cloud PC.</p>
 
 <p align="center">
-  <a href="#models">Models</a> · <a href="#install"><b>Install</b></a> ·
-  <a href="#hardware">Hardware</a> · <a href="#tools">Tools</a> ·
-  <a href="#help">Help</a> · <a href="#support-strata">Support</a>
+  <a href="#why-this-fork-exists">Why</a> · <a href="#what-this-fork-changes">Changes</a> ·
+  <a href="#install-on-geforce-now"><b>Install</b></a> · <a href="#what-has-been-tested">Tested</a> ·
+  <a href="#not-on-geforce-now">Not on GeForce NOW</a> · <a href="#updating">Updating</a> ·
+  <a href="#credits">Credits</a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/Niko1221/Strata/releases/latest"><img src="https://img.shields.io/github/v/release/Niko1221/Strata?label=download&color=0ab887" alt="Download Strata"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/Niko1221/Strata" alt="MIT license"></a>
-  <a href="https://github.com/sponsors/Niko1221"><img src="https://img.shields.io/badge/Sponsor-EA4AAA?logo=githubsponsors&logoColor=fff" alt="Sponsor Strata on GitHub Sponsors"></a>
-  <a href="https://buymeacoffee.com/strataengine"><img src="https://img.shields.io/badge/Buy_me_a_coffee-FFDD00?logo=buymeacoffee&logoColor=000" alt="Support Strata on Buy Me a Coffee"></a>
+  <a href="https://github.com/0BlueYan0/GFN-Strata/releases"><img src="https://img.shields.io/github/v/release/0BlueYan0/GFN-Strata?include_prereleases&label=download&color=0ab887" alt="Download the latest release, including pre-releases"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/0BlueYan0/GFN-Strata" alt="MIT license"></a>
+  <a href="https://github.com/Niko1221/Strata"><img src="https://img.shields.io/badge/upstream-Niko1221%2FStrata-555" alt="Upstream project: Niko1221/Strata"></a>
 </p>
 
-<p align="center"><sub><b>English</b> · <a href="docs/lang/README.zh-CN.md">简体中文</a> · <a href="docs/lang/README.ja.md">日本語</a> · <a href="docs/lang/README.de.md">Deutsch</a> · <a href="docs/lang/README.fr.md">Français</a> · <a href="docs/lang/README.es.md">Español</a> · <a href="docs/lang/README.pt-BR.md">Português</a> · <a href="docs/lang/README.pl.md">Polski</a></sub></p>
+<p align="center"><sub><b>English</b> · <a href="docs/lang/README.zh-TW.md">繁體中文</a></sub></p>
 
-**Free, open source, and yours to run.** Use Strata on your desktop or with your favorite coding tools. No account needed.
+This is an unofficial fork of Strata. It makes the desktop app run on a GeForce NOW cloud PC.
 
-## Models
+## Why this fork exists
 
-We recommend **ISTA-DASLab first**, then **Unsloth** and other providers, where a compatible model fits.
+A GeForce NOW session is a locked-down Windows PC:
 
-<details>
-<summary><img src="docs/media/models/qwen.svg" width="22" alt="" align="middle"> &nbsp;<b>Qwen3.8-Flash-Next</b></summary>
+- It does not let programs start `nvidia-smi.exe` or `powershell.exe`. The command prompt answers `Access is denied.`
+- The Windows user folder is kept on a mounted drive, so a file in it has two names, one on `C:` and one on the
+  mounted drive.
 
-| Provider | Choices |
+In the original app this means no graphics card is detected, and a model that is downloaded still fails to load.
+
+<!-- Screenshot spot, Why this fork exists: the original Strata on a GeForce NOW session when it cannot detect the graphics card or fails to load a model. Suggested file name: gfn-upstream-failure.png (in the gfn media folder). -->
+
+## What this fork changes
+
+| Problem on GeForce NOW | What this fork does |
 | --- | --- |
-| **ISTA-DASLab · recommended** | Q2\_0, IQ2\_XS, IQ3\_XXS, IQ3\_S. [Coder: IQ1\_M](docs/MODELS.md#coder) for coding. |
-| **Unsloth** | UD-IQ4\_XS, UD-Q4\_K\_XL, UD-Q5\_K\_XL, UD-Q6\_K\_XL, Q8\_0 |
-| **Gyro · agentionai** | [Gyro-S, Gyro-M](https://huggingface.co/agentionai/Qwen3.8-Flash-Next-Gyro-GGUF). Lower memory use but slower. |
-| **Other options** | [Swift 1.5](docs/MODELS.md#swift-15), [NVFP4](docs/NVFP4.md), [OrcaRouter](docs/ORCA.md) |
+| No graphics card is detected. | When `nvidia-smi` cannot be started, Strata reads the card from the NVIDIA driver instead. |
+| Load stops with "Strata could not find a file it needs to start the engine". | A settings file that is reached through the mounted drive is found and read. |
+| An update would replace these fixes. | The app and its background service are not updated from upstream. New versions come from this repository's Releases. The engine is still updated as upstream does. |
+| "Open settings file" shows a Windows security error. | The settings file opens in an editor inside the app. |
+| Also new | Control vector settings and a Traditional Chinese interface. |
 
-[Compare sizes, memory needs and compatibility](docs/MODELS.md).
+<!-- Screenshot spot, What this fork changes: the Models screen on a GeForce NOW session with the detected graphics card shown. Suggested file name: gfn-models-card-detected.png (in the gfn media folder). -->
 
-</details>
+## Install on GeForce NOW
 
-<details>
-<summary><img src="docs/media/models/qwen.svg" width="22" alt="" align="middle"> &nbsp;<b>Qwen3.6-35B-A3B</b></summary>
+1. Open this repository's [Releases](https://github.com/0BlueYan0/GFN-Strata/releases).
+2. Download `Strata-0.2.16-windows-x64-setup.exe` from the newest release. It is a pre-release and the installer is not signed.
+3. Run the installer.
+4. Open Strata. The app finds the graphics card, then downloads the engine and the model you choose.
 
-**Unsloth:** UD-Q4_K_XL, UD-Q6_K_XL, Q8_0. These are the currently documented packs for this model.
+<!-- Screenshot spot, Install on GeForce NOW: the installer or the first start of the app on a GeForce NOW session. Suggested file name: gfn-install-first-start.png (in the gfn media folder). -->
 
-[Model guide and compatibility](docs/QWEN36.md).
+## What has been tested
 
-</details>
+Seen working on a GeForce NOW session, on 2026-11-18:
 
-<a id="the-other-sizes"></a>
+- The app installs and opens.
+- The graphics card is detected. The driver reported an NVIDIA GeForce RTX 5080 with driver 621.14.
+- A model loads.
+- The chat answers.
 
-Not sure what fits? [Choose a model for your computer](docs/MODELS.md#pick-by-memory).
+<!-- Screenshot spot, What has been tested: a chat with a loaded model on a GeForce NOW session. Suggested file name: gfn-chat-model-loaded.png (in the gfn media folder). -->
 
-## Install
+**Not yet tested on GeForce NOW:** the three things added in 0.2.16.3, which are the control vector settings, editing the
+settings file inside the app, and the Traditional Chinese interface.
 
-<a id="option-a-the-strata-app"></a>
+Not tested anywhere: a PC with more than one NVIDIA card, Linux, and Mac. The release notes list the details:
+[0.2.16.1](docs/release-notes-0.2.16.1.md) · [0.2.16.2](docs/release-notes-0.2.16.2.md).
 
-### Desktop app
+## Not on GeForce NOW?
 
-**[Download Strata for Windows, Linux or Mac →](https://github.com/Niko1221/Strata/releases/latest)**
-
-Install the app, choose a model, and start chatting. There is one installer for each system. On first start the app
-downloads the engine for your graphics card. [Help with the installer](docs/INSTALL.md#the-app).
-
-<sub>Files: `Strata-0.2.16-windows-x64-setup.exe` · `Strata-0.2.16-linux-x86_64.AppImage` · `Strata-0.2.16-macos-arm64.dmg`</sub>
-
-<p align="center">
-  <img src="docs/media/app-chat.png" width="900" alt="Strata desktop app with a chat and live code preview side by side">
-  <br><sub>Chat, files and a live preview in one window.</sub>
-</p>
-
-<a id="option-b-the-terminal-one-line"></a>
-
-### Terminal app
-
-Prefer the terminal? Install Strata, then run **`strata launch`**.
-
-<details open>
-<summary><b>Install commands</b></summary>
+Use the original Strata. It supports more hardware and receives every update. [Download it from the upstream
+project](https://github.com/Niko1221/Strata/releases/latest), or use the Terminal install:
 
 **Linux / Mac**
 
@@ -95,87 +92,30 @@ curl -fsSL --connect-timeout 15 --max-time 120 https://github.com/Niko1221/Strat
 irm -TimeoutSec 120 https://github.com/Niko1221/Strata/releases/latest/download/install.ps1 | iex
 ```
 
-On Windows, open a new terminal afterwards. Then:
+Then run `strata launch`. The guides in [docs](docs) describe models, hardware, tools and troubleshooting:
+[Models](docs/MODELS.md) · [Install guide](docs/INSTALL.md) · [Troubleshooting](docs/TROUBLESHOOTING.md) ·
+[How it works](docs/HOW_IT_WORKS.md).
 
-```sh
-strata launch
-```
+## Updating
 
-Follow the prompts to download and start a model. [Terminal guide](docs/TERMINAL_LAUNCH.md).
+Download the newest installer from this repository's [Releases](https://github.com/0BlueYan0/GFN-Strata/releases) and
+install it over the old one. The update button inside the app updates only the engine.
 
-</details>
+## Credits
 
-<p align="center">
-  <img src="docs/media/terminal-monitor.png" width="900" alt="Strata terminal app showing model activity, speed, memory and recent requests">
-  <br><sub>Watch your model and hardware while it runs.</sub>
-</p>
+- [Niko1221](https://github.com/Niko1221) and the Strata contributors, for Strata. Please consider [sponsoring the upstream author](https://github.com/sponsors/Niko1221).
+- The Qwen team, for the Qwen models.
+- ISTA-DASLab, for the GSQ and RCO quantization.
+- huihui-ai, for the refusal direction.
+- alesha-pro, for packaging the Huihui control vector.
+- Cudila, for the llama.cpp `cvec-hooks` branch named in the upstream control vector's notes.
 
-<a id="build-from-source"></a>
+## License
 
-[Build from source](docs/SOURCE_INSTALL.md) · [Docker](docs/DOCKER.md) · [Full install guide](docs/INSTALL.md)
+[MIT](LICENSE), with the upstream copyright notice kept. The two control vectors are under the Qwen Community License 1.0.
 
-<a id="what-you-need"></a>
+## Disclaimer
 
-## Hardware
-
-| Supported hardware | Guide |
-| --- | --- |
-| **NVIDIA GeForce RTX 20 / 30 / 40 / 50 series** | [NVIDIA setup](docs/INSTALL.md#what-you-need) |
-| **AMD Radeon RX 7700 / 7800 / 7900, RX 9060 / 9070, AI PRO R9700** | [AMD setup](docs/AMD_HIP.md) |
-| **AMD Radeon RX 6800 / 6900 · experimental** | [RX 6000 setup](docs/AMD_HIP.md#rdna2-gfx1030) |
-| **Intel Arc · Linux** | [Intel setup](docs/INTEL_ARC.md) |
-| **Apple Silicon · M1 or newer** | [Mac setup](docs/MAC.md) |
-| **AMD Ryzen AI Max · Strix Halo** | [Strix Halo setup](docs/STRIX_HALO.md) |
-| **NVIDIA DGX Spark · Linux** | [DGX Spark setup](docs/DGX_SPARK_LINUX.md) |
-
-<a id="using-it"></a>
-
-## Tools
-
-**Claude Code · Codex CLI · OpenCode · oh-my-pi · pi.dev · Hermes Agent · OpenClaw**, and more through the OpenAI- and Anthropic-compatible APIs.
-
-Run **`strata connect`** to see setup instructions for your tool. [Connection guide](docs/TERMINAL_LAUNCH.md#connect-your-apps-strata-connect).
-
-<a id="guides"></a>
-<a id="how-fast-is-it"></a>
-<a id="how-does-it-work"></a>
-<a id="something-went-wrong"></a>
-
-## Help
-
-[All guides](docs) · [Troubleshooting](docs/TROUBLESHOOTING.md) · [Report a bug](https://github.com/Niko1221/Strata/issues/new/choose) ·
-[Benchmarks](docs/COMMUNITY_BENCHMARKS.md) · [How it works](docs/HOW_IT_WORKS.md) · [Contribute](.github/CONTRIBUTING.md)
-
-## Support Strata
-
-**Help keep local AI open to everyone.** A GitHub sponsorship or a coffee helps fund development and testing on more hardware.
-
-<a href="https://github.com/sponsors/Niko1221"><img src="https://img.shields.io/badge/Sponsor_on_GitHub-EA4AAA?style=for-the-badge&logo=githubsponsors&logoColor=white" alt="GitHub Sponsors: sponsor Strata" height="48"></a>
-<a href="https://buymeacoffee.com/strataengine"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee: support Strata" height="48"></a>
-
-### Loyal supporters
-
-Thank you to everyone who supports Strata.
-
-<!-- supporters:start (one line per public supporter, newest last; copy a line and change the GitHub name in all four places) -->
-<a href="https://github.com/ryan4yin"><img src="https://github.com/ryan4yin.png?size=96" width="48" height="48" alt="ryan4yin" title="ryan4yin"></a>
-<a href="https://github.com/themactep"><img src="https://github.com/themactep.png?size=96" width="48" height="48" alt="themactep" title="themactep"></a>
-<a href="https://github.com/macintog"><img src="https://github.com/macintog.png?size=96" width="48" height="48" alt="macintog" title="macintog"></a>
-<a href="https://github.com/bisonbet"><img src="https://github.com/bisonbet.png?size=96" width="48" height="48" alt="bisonbet" title="bisonbet"></a>
-<a href="https://github.com/vizv"><img src="https://github.com/vizv.png?size=96" width="48" height="48" alt="vizv" title="vizv"></a>
-<a href="https://github.com/kod88vn"><img src="https://github.com/kod88vn.png?size=96" width="48" height="48" alt="kod88vn" title="kod88vn"></a>
-<a href="https://github.com/seoulworker"><img src="https://github.com/seoulworker.png?size=96" width="48" height="48" alt="seoulworker" title="seoulworker"></a>
-<a href="https://github.com/jackyini"><img src="https://github.com/jackyini.png?size=96" width="48" height="48" alt="jackyini" title="jackyini"></a>
-<a href="https://github.com/router0mail"><img src="https://github.com/router0mail.png?size=96" width="48" height="48" alt="router0mail" title="router0mail"></a>
-<!-- supporters:end -->
-
-All supporters and how to support Strata: [SUPPORTERS.md](SUPPORTERS.md)
-
-[MIT license](LICENSE) · [Credits and model licenses](docs/HOW_IT_WORKS.md#credits) · [Privacy](docs/SAFETY.md)
-
-<a id="option-c-let-your-ai-set-it-up"></a>
+GeForce NOW is a trademark of NVIDIA. This project is not affiliated with NVIDIA or with the upstream Strata project.
 
 <sub>For AI tools and automated readers: <a href="AGENTS.md">technical reference</a> · <a href="docs/AI_SETUP.md">setup instructions</a>.</sub>
-
-**Sponsorships, hardware partnerships or collaborations:** [niko.veit@outlook.com](mailto:niko.veit@outlook.com).
-
