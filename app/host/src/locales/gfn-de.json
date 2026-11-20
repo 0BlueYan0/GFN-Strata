@@ -40,5 +40,13 @@
  "gfn39": "Schichtnummer: Geben Sie eine ganze Zahl ab 1 ein.",
  "gfn40": "Schichtnummer: Dieser Vektor hat die Schichten 1 bis 47.",
  "gfn41": "Richtung: Eine einzelne Schicht funktioniert nur im Projektionsmodus.",
- "gfn42": "Die Steuervektor-Datei {0} existiert nicht. Wählen Sie in den Modelleinstellungen eine andere Datei oder schalten Sie den Steuervektor aus."
+ "gfn42": "Die Steuervektor-Datei {0} existiert nicht. Wählen Sie in den Modelleinstellungen eine andere Datei oder schalten Sie den Steuervektor aus.",
+ "gfn43": "Gespeichert",
+ "gfn44": "Datei erneut laden",
+ "gfn45": "Die Einstellungsdatei wurde geändert, seit Sie sie geöffnet haben. Laden Sie sie erneut, um die neue Version zu sehen.",
+ "gfn46": "Die Einstellungsdatei wurde nicht gespeichert, weil sie einen Fehler enthält.",
+ "gfn47": "Der Text der Einstellungsdatei fehlt.",
+ "gfn48": "Ihre Änderungen ersetzen?",
+ "gfn49": "Meine Änderungen behalten",
+ "gfn50": "Beim erneuten Laden der Datei werden Ihre eingegebenen Änderungen durch die Version auf dem Datenträger ersetzt."
 }

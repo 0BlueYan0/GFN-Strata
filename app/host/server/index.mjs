@@ -1129,6 +1129,9 @@ async function api(req, res, path, method, url) {
   const nativeSettingsFile=/^\/api\/native\/models\/([a-z0-9_.-]+)\/settings-file$/.exec(path);
   if(nativeSettingsFile&&method==='GET')return json(res,200,native.settingsFile(nativeSettingsFile[1]));
   if(nativeSettingsFile&&method==='POST')return json(res,200,await native.openSettingsFile(nativeSettingsFile[1]));
+  const nativeSettingsText=/^\/api\/native\/models\/([a-z0-9_.-]+)\/settings-file\/text$/.exec(path);
+  if(nativeSettingsText&&method==='GET')return json(res,200,native.settingsFileText(nativeSettingsText[1]));
+  if(nativeSettingsText&&method==='PUT'){try{return json(res,200,native.saveSettingsFileText(nativeSettingsText[1],await readBody(req)));}catch(e){if(e.status)return error(res,e.status,e.message,{code:e.code,...(e.issues?{issues:e.issues}:{})});throw e;}}
   const nativeControlVector=/^\/api\/native\/models\/([a-z0-9_.-]+)\/control-vector$/.exec(path);
   if(nativeControlVector&&method==='GET')return json(res,200,native.controlVector(nativeControlVector[1]));
   if(nativeControlVector&&method==='PATCH')return json(res,200,native.saveControlVector(nativeControlVector[1],await readBody(req)));

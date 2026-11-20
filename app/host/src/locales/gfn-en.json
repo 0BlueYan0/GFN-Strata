@@ -40,5 +40,13 @@
  "gfn39": "Layer number: enter a whole number of 1 or more.",
  "gfn40": "Layer number: this vector has layers 1 to 47.",
  "gfn41": "Direction: single works in project mode only.",
- "gfn42": "The control vector file {0} does not exist. Choose another file in the model settings, or turn the control vector off."
+ "gfn42": "The control vector file {0} does not exist. Choose another file in the model settings, or turn the control vector off.",
+ "gfn43": "Saved",
+ "gfn44": "Load the file again",
+ "gfn45": "The settings file was changed since you opened it. Load it again to see the new version.",
+ "gfn46": "The settings file was not saved because it has a mistake.",
+ "gfn47": "The settings file text is missing.",
+ "gfn48": "Replace your changes?",
+ "gfn49": "Keep my changes",
+ "gfn50": "Loading the file again replaces the changes you typed with the version on the disk."
 }

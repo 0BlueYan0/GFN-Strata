@@ -40,5 +40,13 @@
  "gfn39": "Numéro de couche : saisissez un nombre entier supérieur ou égal à 1.",
  "gfn40": "Numéro de couche : ce vecteur a les couches 1 à 47.",
  "gfn41": "Direction : une seule couche ne fonctionne qu’en mode projection.",
- "gfn42": "Le fichier du vecteur de contrôle {0} n’existe pas. Choisissez un autre fichier dans les réglages du modèle ou désactivez le vecteur de contrôle."
+ "gfn42": "Le fichier du vecteur de contrôle {0} n’existe pas. Choisissez un autre fichier dans les réglages du modèle ou désactivez le vecteur de contrôle.",
+ "gfn43": "Enregistré",
+ "gfn44": "Recharger le fichier",
+ "gfn45": "Le fichier de réglages a été modifié depuis que vous l’avez ouvert. Rechargez-le pour voir la nouvelle version.",
+ "gfn46": "Le fichier de réglages n’a pas été enregistré car il contient une erreur.",
+ "gfn47": "Le texte du fichier de réglages est manquant.",
+ "gfn48": "Remplacer vos modifications ?",
+ "gfn49": "Garder mes modifications",
+ "gfn50": "Recharger le fichier remplace les modifications que vous avez saisies par la version qui se trouve sur le disque."
 }

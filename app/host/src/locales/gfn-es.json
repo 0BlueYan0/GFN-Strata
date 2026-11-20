@@ -40,5 +40,13 @@
  "gfn39": "Número de capa: escribe un número entero de 1 o más.",
  "gfn40": "Número de capa: este vector tiene las capas 1 a 47.",
  "gfn41": "Dirección: una sola capa funciona solo en modo proyección.",
- "gfn42": "El archivo del vector de control {0} no existe. Elige otro archivo en los ajustes del modelo o desactiva el vector de control."
+ "gfn42": "El archivo del vector de control {0} no existe. Elige otro archivo en los ajustes del modelo o desactiva el vector de control.",
+ "gfn43": "Guardado",
+ "gfn44": "Volver a cargar el archivo",
+ "gfn45": "El archivo de ajustes cambió desde que lo abriste. Vuelve a cargarlo para ver la nueva versión.",
+ "gfn46": "El archivo de ajustes no se guardó porque tiene un error.",
+ "gfn47": "Falta el texto del archivo de ajustes.",
+ "gfn48": "¿Reemplazar tus cambios?",
+ "gfn49": "Conservar mis cambios",
+ "gfn50": "Al volver a cargar el archivo, los cambios que escribiste se reemplazan por la versión que hay en el disco."
 }

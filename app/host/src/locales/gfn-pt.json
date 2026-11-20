@@ -40,5 +40,13 @@
  "gfn39": "Número da camada: digite um número inteiro de 1 ou mais.",
  "gfn40": "Número da camada: este vetor tem as camadas 1 a 47.",
  "gfn41": "Direção: camada única só funciona no modo projeção.",
- "gfn42": "O arquivo do vetor de controle {0} não existe. Escolha outro arquivo nas configurações do modelo ou desligue o vetor de controle."
+ "gfn42": "O arquivo do vetor de controle {0} não existe. Escolha outro arquivo nas configurações do modelo ou desligue o vetor de controle.",
+ "gfn43": "Salvo",
+ "gfn44": "Carregar o arquivo novamente",
+ "gfn45": "O arquivo de configurações foi alterado desde que você o abriu. Carregue-o novamente para ver a nova versão.",
+ "gfn46": "O arquivo de configurações não foi salvo porque tem um erro.",
+ "gfn47": "O texto do arquivo de configurações está ausente.",
+ "gfn48": "Substituir suas alterações?",
+ "gfn49": "Manter minhas alterações",
+ "gfn50": "Carregar o arquivo novamente substitui as alterações que você digitou pela versão que está no disco."
 }

@@ -339,3 +339,4 @@ button.run-toolbar-summary:hover>span strong{color:var(--st-accent-text)}
 .native-control-vector{padding:4px 0 12px;border-bottom:1px solid var(--st-line);margin:20px 0 12px}
 .native-control-vector__title{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .native-control-vector__fields{margin-top:4px;margin-bottom:16px}
+textarea.config-editor.st-input.native-settings-file__text{height:clamp(160px,28vh,320px);min-height:160px}
