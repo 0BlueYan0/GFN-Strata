@@ -144,10 +144,14 @@ QUOTES = str.maketrans({"“": "「", "”": "」", "‘": "『", "’": "』"})
 # half-width , ; : ? ! right after a Chinese character become full-width (the zh catalogs have a few such lines)
 HALF_TO_FULL = {",": "，", ";": "；", ":": "：", "?": "？", "!": "！"}
 _AFTER_CJK = re.compile("([一-鿿」』）])([,;:?!]) ?")
+# a placeholder's } or a half-width ) followed by one of those marks and then a Chinese character is the same
+# sentence break; after a Latin letter the mark is a label (Shift+Enter:) and stays as it is
+_AFTER_CLOSER = re.compile("([}\\)])([,;:?!]) ?(?=[一-鿿])")
 
 
 def fix_punct(text):
-    return _AFTER_CJK.sub(lambda m: m.group(1) + HALF_TO_FULL[m.group(2)], text)
+    text = _AFTER_CJK.sub(lambda m: m.group(1) + HALF_TO_FULL[m.group(2)], text)
+    return _AFTER_CLOSER.sub(lambda m: m.group(1) + HALF_TO_FULL[m.group(2)], text)
 
 
 _converter = None
