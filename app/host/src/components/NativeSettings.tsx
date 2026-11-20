@@ -2,12 +2,13 @@ import { DecimalInput } from './DecimalInput';
 import { tr } from '../lib/i18n';
 import {nativeSettingsResponse,nativeSettingsValues} from '../lib/native-settings-response';
 import { describeChange, type TunedChange } from '../lib/tune-values';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../lib/client';
 import { refreshNative, useNative, type NativeField } from '../lib/native';
 import { Btn, ErrorNotice, Select } from './ui';
 import { draftingChoices } from '../lib/drafting';
 import { NativeMcpEditor } from './NativeMcpEditor';
+import { noSettingsSync, ownSave, type SettingsSync } from './NativeControlVector';
 import { choiceOptions, choiceValue, isNumberChoice, withChoice } from '../lib/speed-choice';
 /** One of the speed features: what it is called, what it does, whether it is on by default, and the engine environment it writes outside its default (server/native-settings.mjs). */
 interface SpeedSwitch {
@@ -31,17 +32,25 @@ const switchGroup = (sw: SpeedSwitch) => sw.group ?? 'Speed';
 const switchHas = (entries: Record<string, string> | undefined, env: Record<string, string> | undefined) => !!entries && Object.keys(entries).length > 0 && Object.entries(entries).every(([name, value]) => env?.[name] === value);
 const switchIsSet = (sw: SpeedSwitch, env: Record<string, string> | undefined) => switchHas(sw.env, env) || switchHas(sw.legacy, env);
 const switchIsOn = (sw: SpeedSwitch, env: Record<string, string> | undefined) => switchIsSet(sw, env) !== (sw.default === 'on');
-export function NativeSettings({ model }: {
+export function NativeSettings({ model, sync = noSettingsSync, onSaved }: {
     model: string;
+    sync?: SettingsSync;
+    onSaved?: (source: string) => void;
 }) {
     const native = useNative();
     const [revision,setRevision]=useState(0);
+    const handled = useRef(sync.count), reading = useRef(false);   // reading: a read of the file is on its way
     const [hints, setHints] = useState<Record<string, string>>({});   // a field's hint worded for this model (the Drafting size)
     const [switches, setSwitches] = useState<SpeedSwitch[]>([]);   // the speed switches that apply to this model on this PC
     const [tuned, setTuned] = useState<{ preset: { name: string } | null; changed: TunedChange[] } | null>(null);
     const [values, setValues] = useState<Record<string, any>>({}), [mcp, setMcp] = useState('{}'), [original, setOriginal] = useState(''), [text, setText] = useState(''), [tab, setTab] = useState('fields'), [pending, setPending] = useState(false), [error, setError] = useState(''), [notice, setNotice] = useState(''), [query, setQuery] = useState('');
     useEffect(() => {
+        // Its own save does not read again, unless another component's save started a read that is not back yet: leaving that read would cancel it
+        // (the cleanup below) and the screen would stay empty. The file that read gets holds both saves.
+        if (ownSave(handled, sync, 'settings') && !reading.current)
+            return;
         let active = true;
+        reading.current = true;
         setOriginal('');
         setValues({});
         setText('');
@@ -65,12 +74,15 @@ export function NativeSettings({ model }: {
             setText(JSON.stringify(value.values, null, 2));
             setMcp(JSON.stringify(value.mcp ?? {}, null, 2));
             setOriginal(JSON.stringify({ values: value.values, mcp: value.mcp ?? {} }));
+            reading.current = false;
         }).catch(e => {
-            if (active)
+            if (active) {
                 setError(e.message);
+                reading.current = false;
+            }
         });
         return () => { active = false; };
-    }, [model,revision]);
+    }, [model,revision,sync.count]);
     const change = (id: string, value: any) => { const next = { ...values, [id]: value }; setValues(next); setText(JSON.stringify(next, null, 2)); setNotice(''); };
     /** The default removes the switch's environment entries, the other state writes them: the model's file then carries nothing for a default launch. */
     const changeSwitch = (sw: SpeedSwitch, on: boolean) => { const env = { ...(values.env ?? {}) }; const write = on !== (sw.default === 'on'); for (const [name, value] of Object.entries(sw.env)) { if (write) env[name] = value; else delete env[name]; } if (!write) for (const name of Object.keys(sw.legacy ?? {})) delete env[name]; change('env', env); };
@@ -91,6 +103,7 @@ export function NativeSettings({ model }: {
             setOriginal(JSON.stringify({ values: result.values, mcp: result.mcp }));
             setNotice('Saved. Load the model again to apply these settings. A backup of the previous configuration was kept.');
             await refreshNative(true);
+            onSaved?.('settings');
         }
         catch (e) {
             setError(e instanceof Error ? e.message : String(e));

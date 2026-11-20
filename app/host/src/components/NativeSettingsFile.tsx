@@ -1,8 +1,9 @@
 import { tr } from '../lib/i18n';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, ApiError } from '../lib/client';
 import { Btn, Dialog, ErrorNotice } from './ui';
 import { issueText, type RunConfigIssue, type SettingsFileInfo } from '../lib/run-config-issues';
+import { noSettingsSync, ownSave, type SettingsSync } from './NativeControlVector';
 
 /** The settings file with its text. `version` is what the host compares on a save, so a file that changed meanwhile is never overwritten. */
 type SettingsFileText = SettingsFileInfo & { text: string; version: string };
@@ -12,17 +13,19 @@ type SettingsFileText = SettingsFileInfo & { text: string; version: string };
  * (no other program is started) and changes any engine option; the change applies the next time the model starts. The text is checked
  * on the host before it is written, and a mistake is shown in plain words with its line.
  */
-export function NativeSettingsFile({ model }: { model: string }) {
+export function NativeSettingsFile({ model, sync = noSettingsSync, onSaved }: { model: string; sync?: SettingsSync; onSaved?: (source: string) => void }) {
     const [info, setInfo] = useState<SettingsFileInfo | null>(null), [pending, setPending] = useState(false), [error, setError] = useState('');
     const [open, setOpen] = useState(false), [text, setText] = useState(''), [version, setVersion] = useState(''), [conflict, setConflict] = useState(false), [problems, setProblems] = useState<RunConfigIssue[]>([]), [saved, setSaved] = useState(false), [replacing, setReplacing] = useState(false);
     const check = useCallback(() => api.get<SettingsFileInfo>(`/api/native/models/${model}/settings-file`).then(value => { setInfo(value); setError(''); }).catch(() => setInfo(null)), [model]);
+    const handled = useRef(sync.count);
     useEffect(() => {
-        void check();
+        if (!ownSave(handled, sync, 'settings-file'))
+            void check();
         // Back from another program that changed the file: look at the file again.
         const again = () => void check();
         window.addEventListener('focus', again);
         return () => window.removeEventListener('focus', again);
-    }, [check]);
+    }, [check, sync.count]);
     async function load(): Promise<boolean> {
         setPending(true);
         setError('');
@@ -58,6 +61,7 @@ export function NativeSettingsFile({ model }: { model: string }) {
             setOpen(false);
             setSaved(true);
             void check();
+            onSaved?.('settings-file');
         }
         catch (e) {
             const code = e instanceof ApiError ? (e.body as { code?: string } | undefined)?.code : undefined;

@@ -1,5 +1,5 @@
 import { tr } from '../lib/i18n';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react';
 import { api } from '../lib/client';
 import { Btn, ErrorNotice, Pill, Select } from './ui';
 import { InfoTip } from './InfoTip';
@@ -17,14 +17,34 @@ const toForm = (info: Info): Form => {
 const number = (text: string) => text.trim() === '' ? NaN : Number(text);
 
 /**
+ * The three settings components of the expert area (NativeSettings, NativeControlVector, NativeSettingsFile) read and write the same file, each reading it
+ * once. `NativeSettings` sends its whole copy back when it saves, so a copy read before another component's save would put the old arguments back.
+ * NativeModels keeps this counter: a component that saved calls `onSaved(its name)`, and the others read the file again. `source` is the one that saved,
+ * which does not read again (its own notice, "Saved. Load the model again...", stays).
+ */
+export type SettingsSync = { count: number; source: string };
+export const noSettingsSync: SettingsSync = { count: 0, source: '' };
+/** True when this change of the counter is the component's own save. Call it first in the effect that reads the file, with a ref made by `useRef(sync.count)`. */
+export function ownSave(handled: MutableRefObject<number>, sync: SettingsSync, me: string): boolean {
+    const own = sync.count !== handled.current && sync.source === me;
+    handled.current = sync.count;
+    return own;
+}
+
+/**
  * Expert settings: the control vector (this fork). The choices are saved as the engine's own options in the model's settings file
  * (server/control-vector.mjs), so they apply the next time the model starts, from the app and from the Terminal alike.
  * The explanation, the author's warning and the other authors' notes are in the "i" button; nothing is written under the fields.
  */
-export function NativeControlVector({ model }: { model: string }) {
+export function NativeControlVector({ model, sync = noSettingsSync, onSaved }: { model: string; sync?: SettingsSync; onSaved?: (source: string) => void }) {
     const [info, setInfo] = useState<Info | null>(null), [form, setForm] = useState<Form | null>(null), [pending, setPending] = useState(false), [error, setError] = useState(''), [saved, setSaved] = useState(false);
-    const load = useCallback(() => api.get<Info>(`/api/native/models/${model}/control-vector`).then(value => { setInfo(value); setForm(toForm(value)); setError(''); }).catch(() => setInfo(null)), [model]);
-    useEffect(() => { setSaved(false); void load(); }, [load]);
+    // A read that was started before a save of this block answered (or before another read) is out of date when it comes back: its answer is dropped, or it
+    // would show the file as it was before the save.
+    const latest = useRef(0);
+    const load = useCallback(() => { const mine = ++latest.current; return api.get<Info>(`/api/native/models/${model}/control-vector`).then(value => { if (mine !== latest.current) return; setInfo(value); setForm(toForm(value)); setError(''); }).catch(() => { if (mine === latest.current) setInfo(null); }); }, [model]);
+    const handled = useRef(sync.count);
+    useEffect(() => { if (ownSave(handled, sync, 'control-vector'))
+        return; setSaved(false); void load(); }, [load, sync.count]);
     if (!info?.supported || !form)
         return null;
     const locked = info.state.multiple, set = (patch: Partial<Form>) => { setForm({ ...form, ...patch }); setSaved(false); };
@@ -36,9 +56,11 @@ export function NativeControlVector({ model }: { model: string }) {
         setError('');
         try {
             const next = await api.patch<Info>(`/api/native/models/${model}/control-vector`, { enabled: form.enabled, source: form.source, path: form.path, scale: number(form.scale), first: number(form.first), last: number(form.last), mode: form.mode, dir: form.dir, single: form.dir === 'single' ? number(form.single) : null });
+            latest.current++;
             setInfo(next);
             setForm(toForm(next));
             setSaved(true);
+            onSaved?.('control-vector');
         }
         catch (e) {
             setError((e as Error).message);
