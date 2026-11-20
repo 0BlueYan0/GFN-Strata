@@ -24,6 +24,7 @@ const catalogs = {
   de: {"a.text": "Hierher zurückspulen", "a.title": "Hell / Dunkel", "chat.hidden": {one: "{n} Nachricht ausgeblendet", other: "{n} Nachrichten ausgeblendet"}},
   ru: {"chat.hidden": {one: "{n} сообщение скрыто", few: "{n} сообщения скрыто", many: "{n} сообщений скрыто", other: "{n} сообщения скрыто"}},
   ja: {"chat.hidden": {other: "{n} 件のメッセージを非表示"}},
+  "zh-TW": {"chat.hidden": {other: "{n} 則訊息已隱藏"}},
 };
 let fetched = [];
 globalThis.fetch = async (url) => {
@@ -65,6 +66,9 @@ const plural = {one: "{n} message hidden", other: "{n} messages hidden"};
                    ["1 сообщение скрыто", "2 сообщения скрыто", "5 сообщений скрыто", "21 сообщение скрыто", "22 сообщения скрыто"]);
   await i18n.setLanguage("ja");
   assert.equal(tr("chat.hidden", plural, {n: 1}), "1 件のメッセージを非表示");
+  assert.equal(await i18n.setLanguage("zh-TW"), "zh-TW");
+  assert.equal(document.documentElement.lang, "zh-TW");
+  assert.equal(tr("chat.hidden", plural, {n: 3}), "3 則訊息已隱藏");
 
   // switching back restores the English text that was in the page
   await i18n.setLanguage("de");
