@@ -43,7 +43,7 @@ GeForce NOW 的連線是一台受到限制的 Windows 電腦：
 | 偵測不到顯示卡。 | `nvidia-smi` 無法啟動時，Strata 改從 NVIDIA 驅動程式讀取顯示卡資訊。 |
 | 載入停在「Strata could not find a file it needs to start the engine」。 | 經過掛載磁碟的設定檔路徑也能找到並讀取。 |
 | 更新會蓋掉這些修正。 | App 與它的背景服務不從上游更新，新版從這個 repo 的 Releases 下載。引擎仍照上游更新。 |
-| 「Open settings file」跳出 Windows 安全性錯誤。 | 設定檔改在 App 內的編輯器開啟。 |
+| 「開啟設定檔」跳出 Windows 安全性錯誤。 | 設定檔改在 App 內的編輯器開啟。 |
 | 另外新增 | 控制向量設定與繁體中文介面。 |
 
 <!-- 截圖位置，這個 fork 改了什麼：GeForce NOW 上的模型頁，顯示偵測到的顯示卡。建議檔名 gfn-models-card-detected.png（放在 gfn 媒體資料夾）。 -->
