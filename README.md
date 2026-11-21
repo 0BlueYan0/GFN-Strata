@@ -45,6 +45,8 @@ In the original app this means no graphics card is detected, and a model that is
 | Load stops with "Strata could not find a file it needs to start the engine". | A settings file that is reached through the mounted drive is found and read. |
 | An update would replace these fixes. | The app and its background service are not updated from upstream. New versions come from this repository's Releases. The engine is still updated as upstream does. |
 | "Open settings file" shows a Windows security error. | The settings file opens in an editor inside the app. |
+| Every new session shows the guided setup again, and chats and the API key are gone. | These are now kept in `%LOCALAPPDATA%\Strata\home`, which stays between sessions. A PC that already uses `.strata` in the user folder keeps using it. |
+| An API request with images fails once it is larger than 12 MiB. | Requests up to 256 MiB are accepted. A larger one gets a "request too large" answer (HTTP 413). |
 | Also new | Control vector settings and a Traditional Chinese interface. |
 
 <!-- Screenshot spot, What this fork changes: the Models screen on a GeForce NOW session with the detected graphics card shown. Suggested file name: gfn-models-card-detected.png (in the gfn media folder). -->
@@ -70,7 +72,8 @@ Seen working on a GeForce NOW session, on 2026-11-18:
 <!-- Screenshot spot, What has been tested: a chat with a loaded model on a GeForce NOW session. Suggested file name: gfn-chat-model-loaded.png (in the gfn media folder). -->
 
 **Not yet tested on GeForce NOW:** the three things added in 0.2.16.3, which are the control vector settings, editing the
-settings file inside the app, and the Traditional Chinese interface.
+settings file inside the app, and the Traditional Chinese interface. Also not yet tested there: keeping the app's data
+between sessions, and API requests larger than 12 MiB.
 
 Not tested anywhere: a PC with more than one NVIDIA card, Linux, and Mac. The release notes list the details:
 [0.2.16.1](docs/release-notes-0.2.16.1.md) · [0.2.16.2](docs/release-notes-0.2.16.2.md).

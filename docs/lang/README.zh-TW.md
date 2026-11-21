@@ -44,6 +44,8 @@ GeForce NOW 的連線是一台受到限制的 Windows 電腦：
 | 載入停在「Strata could not find a file it needs to start the engine」。 | 經過掛載磁碟的設定檔路徑也能找到並讀取。 |
 | 更新會蓋掉這些修正。 | App 與它的背景服務不從上游更新，新版從這個 repo 的 Releases 下載。引擎仍照上游更新。 |
 | 「開啟設定檔」跳出 Windows 安全性錯誤。 | 設定檔改在 App 內的編輯器開啟。 |
+| 每次開新連線都要重跑引導設定，聊天紀錄與 API 金鑰也不見了。 | 這些資料改存在 `%LOCALAPPDATA%\Strata\home`，連線之間會留著。已經在用使用者資料夾裡 `.strata` 的電腦照舊用原位置。 |
+| 帶圖片的 API 請求超過 12 MiB 就失敗。 | 接受到 256 MiB。更大的請求會收到「請求太大」（HTTP 413）的回應。 |
 | 另外新增 | 控制向量設定與繁體中文介面。 |
 
 <!-- 截圖位置，這個 fork 改了什麼：GeForce NOW 上的模型頁，顯示偵測到的顯示卡。建議檔名 gfn-models-card-detected.png（放在 gfn 媒體資料夾）。 -->
@@ -68,7 +70,7 @@ GeForce NOW 的連線是一台受到限制的 Windows 電腦：
 
 <!-- 截圖位置，驗證狀態：GeForce NOW 上已載入模型的聊天畫面。建議檔名 gfn-chat-model-loaded.png（放在 gfn 媒體資料夾）。 -->
 
-**尚未在 GeForce NOW 驗證：** 0.2.16.3 新增的三項，也就是控制向量設定、App 內編輯設定檔、繁體中文介面。
+**尚未在 GeForce NOW 驗證：** 0.2.16.3 新增的三項，也就是控制向量設定、App 內編輯設定檔、繁體中文介面。App 的資料在連線之間留著、超過 12 MiB 的 API 請求，也還沒在 GeForce NOW 驗證。
 
 任何地方都還沒測過：多張 NVIDIA 顯示卡的電腦、Linux、Mac。細節請看版本說明：
 [0.2.16.1](../release-notes-0.2.16.1.md) · [0.2.16.2](../release-notes-0.2.16.2.md)。
