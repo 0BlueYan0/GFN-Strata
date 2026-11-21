@@ -38,9 +38,10 @@ class VersionBump(unittest.TestCase):
         # 0.2.16.1 (fork pre-release): Control is 0.1.62.1; the app and Terminal stay 0.2.16 and the engine stays 0.1.62.
         # 0.2.16.2 (fork pre-release): Control is 0.1.62.2; only the app host changed (a run config named through a mounted user folder loads).
         # 0.2.16.3 (fork pre-release): Control is 0.1.62.3; control vector settings, an in-app settings file editor and Traditional Chinese.
+        # 0.2.16.4 (fork pre-release): Control is 0.1.62.4; app data in %LOCALAPPDATA%\Strata\home on Windows and /v1 requests up to 256 MiB.
         self.assertEqual(strata_cli.PRODUCT_VERSION, "0.2.16")
-        self.assertEqual(strata_cli.version(), "0.1.62.3")              # the CMake project version: Control
-        self.assertEqual(first("../engine/CMakeLists.txt", r"^project\(strata VERSION ([0-9.]+) "), "0.1.62.3")
+        self.assertEqual(strata_cli.version(), "0.1.62.4")              # the CMake project version: Control
+        self.assertEqual(first("../engine/CMakeLists.txt", r"^project\(strata VERSION ([0-9.]+) "), "0.1.62.4")
         self.assertIn('STRATA_VERSION="0.1.62-metal"', (ROOT.parent / "engine" / "metal" / "CMakeLists.txt").read_text(encoding="utf-8"))
 
     def test_every_place_the_app_version_lives_says_0_2_3(self):
@@ -63,7 +64,7 @@ class VersionBump(unittest.TestCase):
     def test_version_prints_the_product_and_the_build(self):
         done = subprocess.run([sys.executable, str(ROOT / "strata.py"), "--version"], capture_output=True, text=True, cwd=str(ROOT),
                               env={**os.environ, "STRATA_NO_HANDOVER": "1"})
-        self.assertTrue(done.stdout.startswith("strata 0.2.16 (build 0.1.62.3;"), done.stdout)
+        self.assertTrue(done.stdout.startswith("strata 0.2.16 (build 0.1.62.4;"), done.stdout)
 
 
 class UpdateFromTheLastRelease(test_updater.UpdaterCase):
