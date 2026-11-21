@@ -54,7 +54,8 @@ import { detectBackend, currentBackend, streamChat, inferenceLine } from './infe
 import { CONTEXT_TOKENS, VARIANTS, localModels, variant } from './catalog.mjs';
 import { browseLocalModels, inspectLocalModel } from './local-models.mjs';
 import { keepStreamAlive } from './stream-beat.mjs';
-import { EventHub, InvalidJsonError, badRequest, error, json, readBody, readRaw, requestUrl, sameSecret, uid } from './util.mjs';
+import { maxBodyBytes, readJsonWithin, tooLargeBody } from './body-limit.mjs';
+import { BodyTooLargeError, EventHub, InvalidJsonError, badRequest, error, json, readBody, readRaw, requestUrl, sameSecret, uid } from './util.mjs';
 import { createUploads } from './chat-uploads.mjs';
 import { createNativeDrops } from './native-drop.mjs';
 import { createVisionProbe, effectiveVision, readsPicturesByDefault } from './vision-probe.mjs';
@@ -2204,6 +2205,12 @@ async function openai(req, res, path, method, via) {
   try {
     return await routeInference(req, res, path, method, via);
   } catch (err) {
+    if (err instanceof BodyTooLargeError) {
+      if (res.headersSent) return res.end();
+      const payload = JSON.stringify(tooLargeBody(path, err.limit, err.limit === maxBodyBytes()));
+      res.writeHead(413, { 'content-type': 'application/json; charset=utf-8', 'content-length': Buffer.byteLength(payload), 'cache-control': 'no-store', connection: 'close' });
+      return res.end(payload);
+    }
     if (!(err instanceof InvalidJsonError)) throw err;
     if (res.headersSent) return res.end();
     const message = 'Invalid JSON in request body';
@@ -2216,7 +2223,7 @@ async function openai(req, res, path, method, via) {
 async function routeInference(req, res, path, method, via) {
   if(native.state().instances.length){
     if(path==='/v1/models'&&method==='GET')return json(res,200,{object:'list',data:nativeModelEntries(native.state().instances)});
-    if(method==='POST'&&['/v1/chat/completions','/v1/messages','/v1/responses'].includes(path)){if(store.get().serving?.pauseServing)return error(res,503,'New API requests are paused.');if(path==='/v1/responses'&&!native.state().capabilities.responses)return error(res,501,'Update the native Strata installation to use the Responses API.');return nativeGateway({req,res,path,body:await readBody(req,12*1024*1024),control:native,serving,mcpAllowed:model=>serving.mcpToolsAllowed(req,via,model)});}
+    if(method==='POST'&&['/v1/chat/completions','/v1/messages','/v1/responses'].includes(path)){if(store.get().serving?.pauseServing)return error(res,503,'New API requests are paused.');if(path==='/v1/responses'&&!native.state().capabilities.responses)return error(res,501,'Update the native Strata installation to use the Responses API.');return nativeGateway({req,res,path,body:await readJsonWithin(req,maxBodyBytes()),control:native,serving,mcpAllowed:model=>serving.mcpToolsAllowed(req,via,model)});}
   }
   if(path==='/v1/responses'&&method==='POST')return error(res,503,'Load a native Strata model to use the Responses API.');
 
@@ -2227,7 +2234,7 @@ async function routeInference(req, res, path, method, via) {
 
   if ((path === '/v1/chat/completions' || path === '/v1/messages') && method === 'POST') {
     if (store.get().serving?.pauseServing) return error(res, 503, 'New API requests are paused. Resume them in Serving.');
-    const body = await readBody(req);
+    const body = await readJsonWithin(req, 4 * 1024 * 1024);
     const client = clientName(req);
     const anthropic = path === '/v1/messages';
     // An API client can say which workspace it is acting for; without it, a

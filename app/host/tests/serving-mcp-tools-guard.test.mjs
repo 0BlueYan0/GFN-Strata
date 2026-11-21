@@ -110,7 +110,7 @@ test('the host passes the listener a request came in on', () => {
   assert.match(src, /return await openai\(req, res, apiPath\(path\), method, 'app'\);/);
   assert.match(src, /const localShare = createLocalShare\(\{ handle: \(req, res, path, method\) => openai\(req, res, path, method, 'share'\),/);
   assert.match(src, /const tunnelOrigin = createLocalShare\(\{ handle: \(req, res, path, method\) => openai\(req, res, path, method, 'tunnel'\),/);
-  assert.match(src, /nativeGateway\(\{req,res,path,body:await readBody\(req,12\*1024\*1024\),control:native,serving,mcpAllowed:model=>serving\.mcpToolsAllowed\(req,via,model\)\}\)/);
+  assert.match(src, /nativeGateway\(\{req,res,path,body:await readJsonWithin\(req,maxBodyBytes\(\)\),control:native,serving,mcpAllowed:model=>serving\.mcpToolsAllowed\(req,via,model\)\}\)/);
   assert.equal((src.match(/[^.\w]openai\(req, res/g) ?? []).length, 4, 'the definition and three callers: no caller without a listener');
   assert.equal((src.match(/openai\(req, res, [^\n]*?, '(?:app|share|tunnel)'\)/g) ?? []).length, 3);
 });

@@ -66,12 +66,21 @@ export function badRequest(res) {
 
 export class InvalidJsonError extends Error {}
 
+/** A request body larger than `limit` bytes. The message stays the one the other routes have always answered with. */
+export class BodyTooLargeError extends Error {
+  constructor(limit) {
+    super('Request body too large');
+    this.name = 'BodyTooLargeError';
+    this.limit = limit;
+  }
+}
+
 export async function readBody(req, limit = 4 * 1024 * 1024) {
   const chunks = [];
   let size = 0;
   for await (const chunk of req) {
     size += chunk.length;
-    if (size > limit) throw new Error('Request body too large');
+    if (size > limit) throw new BodyTooLargeError(limit);
     chunks.push(chunk);
   }
   if (!chunks.length) return {};
