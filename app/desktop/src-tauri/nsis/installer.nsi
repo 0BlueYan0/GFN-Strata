@@ -498,7 +498,7 @@ Function un.DataPage
   ${IfThen} $(^RTL) = 1 ${|} nsDialogs::SetRTL $(^RTL) ${|}
   ${NSD_CreateCheckBox} 0 0 100% 12u "Also remove my Strata data (models, chats, settings)"
   Pop $DeleteAppDataCheckbox
-  ${NSD_CreateLabel} 12u 18u -12u 96u "If you tick it, these folders are deleted, and nothing else:$\r$\n$\r$\n$LOCALAPPDATA\Strata   (engine, installed copy, tunings)$\r$\n$APPDATA\Strata   (settings)$\r$\n$PROFILE\.strata   (your chats, app settings)$\r$\n$DOCUMENTS\Strata\Models   (models Strata downloaded into its own folder)$\r$\n$\r$\nA model folder you chose yourself is never deleted."
+  ${NSD_CreateLabel} 12u 18u -12u 96u "If you tick it, these folders are deleted, and nothing else:$\r$\n$\r$\n$LOCALAPPDATA\Strata   (engine, installed copy, tunings, chats, app settings)$\r$\n$APPDATA\Strata   (settings)$\r$\n$PROFILE\.strata   (your chats, app settings)$\r$\n$DOCUMENTS\Strata\Models   (models Strata downloaded into its own folder)$\r$\n$\r$\nA model folder you chose yourself is never deleted."
   Pop $0
   ${NSD_SetFocus} $DeleteAppDataCheckbox
   nsDialogs::Show

@@ -131,7 +131,8 @@ Source checkouts have a [separate update workflow](SOURCE_INSTALL.md#updating).
 
 | Item | Default location |
 | --- | --- |
-| Desktop chats and host state | `~/.strata` (or `STRATA_HOME`) |
+| Desktop chats and host state, Windows | `%LOCALAPPDATA%\Strata\home` (or `STRATA_HOME`). An install that already uses `~\.strata` keeps using it. |
+| Desktop chats and host state, Linux / Mac | `~/.strata` (or `STRATA_HOME`) |
 | Engine components, Windows | `%LOCALAPPDATA%\Strata\components` |
 | Engine components, Linux / Mac | `$XDG_DATA_HOME/strata/components`, normally `~/.local/share/strata/components` |
 | Terminal files | The `terminal` folder beside `components`; the installer prints the exact path |

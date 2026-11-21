@@ -2,19 +2,39 @@ import { migrateSetup } from './setup.mjs';
 /** Tiny persisted state for the host: one JSON file under STRATA_HOME. */
 import { accessSync, constants, mkdirSync, readFileSync, writeFileSync, existsSync, realpathSync, readdirSync, statSync, statfsSync, symlinkSync } from 'node:fs';
 import { alignModels, isDriveRoot, libraryFolderFromPick, makeFolder } from './model-folder.mjs';
-import { dirname, isAbsolute, join, parse, relative, resolve } from 'node:path';
+import { dirname, isAbsolute, join, parse, posix, relative, resolve, win32 } from 'node:path';
 import { homedir } from 'node:os';
 import { defaultModelDirectory } from './model-directory-default.mjs';
 
 /**
- * Prefer ~/.strata, the way the packaged app stores its data. Sandboxes and
- * locked-down accounts cannot write to the home directory, so fall back to a
- * folder next to the checkout rather than failing to boot.
+ * The folders the host tries for its data, best first.
+ * STRATA_HOME wins. On Windows the default is %LOCALAPPDATA%\Strata\home, a place that streamed Windows sessions (GeForce NOW) keep between sessions,
+ * unless an earlier install already keeps its state in ~\.strata and the new place has none: that install keeps its folder, nothing is copied or moved.
+ * Elsewhere, and on Windows without an absolute LOCALAPPDATA, it is ~/.strata, then a folder next to the checkout.
+ */
+export function homeCandidates({
+  env = process.env,
+  platform = process.platform,
+  home = homedir(),
+  cwd = process.cwd(),
+  hasState = dir => existsSync(join(dir, 'data', 'state.json')),
+} = {}) {
+  const p = platform === 'win32' ? win32 : posix;
+  const legacy = p.join(home, '.strata');
+  const local = p.join(cwd, '.strata');
+  if (env.STRATA_HOME) return [env.STRATA_HOME, legacy, local];
+  const appData = env.LOCALAPPDATA;
+  if (platform !== 'win32' || !appData || !p.isAbsolute(appData)) return [legacy, local];
+  const fresh = p.join(appData, 'Strata', 'home');
+  return !hasState(fresh) && hasState(legacy) ? [legacy, fresh, local] : [fresh, legacy, local];
+}
+
+/**
+ * Sandboxes and locked-down accounts cannot write to the usual folder, so fall back to the next candidate
+ * (in the end a folder next to the checkout) rather than failing to boot.
  */
 function resolveHome() {
-  const candidates = [process.env.STRATA_HOME, join(homedir(), '.strata'), join(process.cwd(), '.strata')].filter(
-    Boolean,
-  );
+  const candidates = homeCandidates().filter(Boolean);
   for (const dir of candidates) {
     try {
       mkdirSync(join(dir, 'models'), { recursive: true });
